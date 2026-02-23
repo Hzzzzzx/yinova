@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>项目空间 · 六十四卦</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black: #000000;
+      --black-light: #0c0c0c;
+      --white: #f0eeec;
+      --white-dim: #a8a6a4;
+      --gold: #c9a227;
+      --gold-dim: #9a7b20;
+      --text: var(--white);
+      --text-dim: var(--white-dim);
+      --border: rgba(201, 162, 39, 0.3);
+      --glow: rgba(201, 162, 39, 0.45);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Serif SC", "PingFang SC", serif;
+      background: #000;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .app {
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+    #starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 228, 200, 0.88);
+      animation: star-breathe var(--dur, 2.5s) ease-in-out var(--delay, 0s) infinite;
+    }
+    @keyframes star-breathe {
+      0%, 100% { filter: brightness(0.7); }
+      50% { filter: brightness(1.05); }
+    }
+    .top-strip {
+      flex-shrink: 0;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--black-light);
+    }
+    .top-bar {
+      padding: 4px 0 8px;
+    }
+    .link-back {
+      color: var(--gold-dim);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .link-back:hover { color: var(--gold); }
+    /* 阴阳：静态白线太极图，中间两枚不动圆点为按钮（阴/阳） */
+    .row-yinyang {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .taiji-wrap {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+    .taiji-wrap svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* 阴阳鱼：纯黑 #000000 / 纯白 #FFFFFF，鱼眼反色；外发光 + 呼吸光效 */
+    .taiji-wrap {
+      filter: drop-shadow(0 0 24px rgba(255,255,255,0.25));
+      animation: taiji-glow-breathe 4s ease-in-out infinite;
+    }
+    @keyframes taiji-glow-breathe {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(255,255,255,0.2)) drop-shadow(0 0 50px rgba(255,255,255,0.12)); }
+      50% { filter: drop-shadow(0 0 32px rgba(255,255,255,0.35)) drop-shadow(0 0 70px rgba(255,255,255,0.2)); }
+    }
+    .taiji-wrap svg .half { stroke: none; }
+    .taiji-wrap svg .half-white { fill: #FFFFFF; }
+    .taiji-wrap svg .half-black { fill: #000000; }
+    .taiji-wrap svg .stroke { fill: none; stroke: rgba(255,255,255,0.5); stroke-width: 1; }
+    .taiji-wrap svg .eye-white { fill: #FFFFFF; }
+    .taiji-wrap svg .eye-black { fill: #000000; }
+    /* 两枚圆点按钮：一黑一白。黑按钮所在那一半为白底，白按钮所在那一半为黑底 */
+    .taiji-dot {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: box-shadow 0.2s, background 0.2s;
+    }
+    /* 未点击时透明，悬停略显 */
+    .taiji-dot[data-robot="main"] { left: 50%; top: 32%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="lan"] { left: 50%; top: 68%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="main"]:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot[data-robot="lan"]:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot.running { }
+    /* 点击后：原黑钮(阴)变白+白呼吸光，原白钮(阳)变黑+黑呼吸光 */
+    .taiji-dot[data-robot="main"].running {
+      background: #f0ece8;
+      animation: breathe-dot-white 2s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="lan"].running {
+      background: #0a0a0e;
+      animation: breathe-dot-black 2s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="main"].starting {
+      background: #f0ece8;
+      animation: breathe-dot-white 1.5s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="lan"].starting {
+      background: #0a0a0e;
+      animation: breathe-dot-black 1.5s ease-in-out infinite;
+    }
+    @keyframes breathe-dot-black {
+      0%, 100% { box-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 16px rgba(40,40,55,0.5); }
+      50% { box-shadow: 0 0 18px rgba(0,0,0,0.95), 0 0 28px rgba(50,50,70,0.6); }
+    }
+    @keyframes breathe-dot-white {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 32px rgba(255,255,255,0.5); }
+    }
+    .taiji-buttons-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .taiji-buttons-layer > * { pointer-events: auto; }
+    .taiji-dot {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      background: rgba(120,120,120,0.3);
+      transition: box-shadow 0.2s, background 0.2s;
+    }
+    .taiji-dot[data-robot="main"] { left: 50%; top: 32%; transform: translate(-50%, -50%); }
+    .taiji-dot[data-robot="lan"] { left: 50%; top: 68%; transform: translate(-50%, -50%); }
+    .taiji-dot:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot[data-robot="main"].running {
+      background: #f0ece8;
+      animation: breathe-dot-white 2s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="lan"].running {
+      background: #0a0a0e;
+      animation: breathe-dot-black 2s ease-in-out infinite;
+    }
+    @keyframes breathe-dot-black {
+      0%, 100% { box-shadow: 0 0 8px rgba(0,0,0,0.8); }
+      50% { box-shadow: 0 0 18px rgba(0,0,0,0.95); }
+    }
+    @keyframes breathe-dot-white {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+      50% { box-shadow: 0 0 20px rgba(255,255,255,0.9); }
+    }
+    .yinyang-stop {
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      transform: translateX(-50%);
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      z-index: 1;
+      pointer-events: auto;
+    }
+    .btn-yinyang-stop {
+      padding: 4px 10px;
+      font-size: 0.7rem;
+      color: #dc5050;
+      background: transparent;
+      border: 1px solid rgba(220,80,80,0.5);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-yinyang-stop:hover { filter: brightness(1.2); }
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      flex: 1;
+      min-height: 0;
+      max-height: 100%;
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+      overflow: hidden;
+    }
+    .page-left {
+      width: var(--left-width, 360px);
+      min-width: 280px;
+      max-width: 560px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--black-light);
+    }
+    .resizer-v {
+      width: 6px;
+      flex-shrink: 0;
+      cursor: col-resize;
+      background: transparent;
+    }
+    .resizer-v:hover { background: rgba(201, 162, 39, 0.15); }
+    .page-right {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--black-light);
+      border-left: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .section-yin-chat {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+    }
+    .section-yin-chat h2 {
+      font-size: 0.95rem;
+      color: var(--gold-dim);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .yin-chat-clear-btn {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    .yin-chat-clear-btn:hover { color: #e05555; border-color: #e05555; }
+    .yin-chat-messages {
+      flex: 1;
+      min-height: 120px;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 10px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    .yin-chat-msg {
+      margin: 8px 0;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .yin-chat-msg.user { color: var(--white-dim); }
+    .yin-chat-msg.user .who { color: var(--gold-dim); }
+    .yin-chat-msg.yin .who { color: var(--gold); }
+    .yin-chat-msg .who { margin-right: 6px; font-weight: 500; }
+    .yin-chat-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+      flex-shrink: 0;
+    }
+    .yin-chat-input-row input {
+      flex: 1;
+      padding: 10px 14px;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .yin-chat-input-row input::placeholder { color: var(--text-dim); }
+    .yin-chat-send {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      border-radius: 6px;
+      color: var(--gold);
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .yin-chat-send:hover { background: rgba(201, 162, 39, 0.12); }
+    .yin-chat-send:disabled { opacity: 0.6; cursor: not-allowed; }
+    .module-projects {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .section-create {
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: var(--black-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .section-create h2 {
+      margin: 0 0 12px 0;
+      font-size: 0.85rem;
+      color: var(--gold-dim);
+      font-weight: 500;
+      letter-spacing: 0.1em;
+    }
+    .create-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .create-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 14px;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .create-row input::placeholder { color: var(--text-dim); }
+    .create-row input:focus {
+      outline: none;
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 8px var(--glow);
+    }
+    .btn-create {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      border-radius: 4px;
+      color: var(--gold);
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-create:hover {
+      background: rgba(201, 162, 39, 0.12);
+      box-shadow: 0 0 12px var(--glow);
+    }
+    .section-list h2 {
+      margin: 0 0 14px 0;
+      font-size: 0.85rem;
+      color: var(--gold-dim);
+      font-weight: 500;
+      letter-spacing: 0.1em;
+    }
+    .project-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .project-list li {
+      margin-bottom: 8px;
+    }
+    .project-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--black-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .project-card:hover {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 16px rgba(201, 162, 39, 0.2);
+    }
+    .project-card .card-link {
+      flex: 1;
+      min-width: 0;
+      text-decoration: none;
+      color: inherit;
+    }
+    .project-card .card-link:hover { color: var(--gold); }
+    .project-card .name {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gold);
+      cursor: text;
+      border-bottom: 1px dashed transparent;
+      transition: border-color 0.15s;
+    }
+    .project-card .name:hover { border-bottom-color: var(--gold-dim); }
+    .project-card .name-input {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--gold);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--gold-dim);
+      outline: none;
+      font-family: inherit;
+      width: 100%;
+      padding: 0;
+    }
+    .project-card .meta {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .project-card .card-actions {
+      flex-shrink: 0;
+      display: flex;
+      gap: 6px;
+    }
+    .project-card .btn-card-action {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .project-card .btn-card-action:hover {
+      color: var(--gold-dim);
+      border-color: var(--gold-dim);
+    }
+    .project-card .btn-card-action.btn-delete:hover { color: #dc5050; border-color: rgba(220,80,80,0.5); }
+    .empty-hint {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      padding: 20px 0;
+    }
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 6px;
+      background: var(--black-light);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .toast.show { opacity: 1; }
+    @media (max-width: 768px) {
+      .page-left { max-width: none; width: 100%; }
+      .resizer-v, .page-right { display: none; }
+    }
+  .yin-chat-md p { margin: 0 0 6px; }
+  .yin-chat-md p:last-child { margin-bottom: 0; }
+  .yin-chat-md ul, .yin-chat-md ol { margin: 4px 0 6px 18px; padding: 0; }
+  .yin-chat-md li { margin-bottom: 2px; }
+  .yin-chat-md code { background: rgba(255,255,255,0.1); border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 0.92em; }
+  .yin-chat-md pre { background: rgba(0,0,0,0.35); border-radius: 6px; padding: 8px 12px; overflow-x: auto; margin: 6px 0; }
+  .yin-chat-md pre code { background: none; padding: 0; }
+  .yin-chat-md strong { color: #e8d6a0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+</head>
+<body>
+  <div id="starfield"></div>
+  <div class="app">
+    <div class="top-strip">
+      <div class="top-bar">
+        <a href="index.html" class="link-back">← 主面板</a>
+      </div>
+      <div class="row-yinyang" id="rowYinyang">
+        <div class="taiji-wrap">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <!-- 上半：白鱼，鱼眼为黑 -->
+            <path class="half half-white" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100 A50 50 0 0 0 50 0"/>
+            <!-- 下半：黑鱼，鱼眼为白 -->
+            <path class="half half-black" d="M50 100 A25 25 0 0 1 50 50 A25 25 0 0 0 50 0 A50 50 0 0 0 50 100"/>
+            <circle class="eye-black" cx="50" cy="25" r="5"/>
+            <circle class="eye-white" cx="50" cy="75" r="5"/>
+            <circle class="stroke" cx="50" cy="50" r="50"/>
+            <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
+          </svg>
+          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
+          <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
+        </div>
+      </div>
+    </div>
+    <div class="page-wrap">
+      <div class="page-left">
+        <div class="module-projects">
+          <section class="section-create">
+            <h2>新建项目</h2>
+            <div class="create-row">
+              <input type="text" id="newProjectName" placeholder="输入项目名称" maxlength="64" />
+              <button type="button" class="btn-create" id="btnCreate">新建</button>
+            </div>
+          </section>
+          <section class="section-list">
+            <h2>项目列表</h2>
+            <ul class="project-list" id="projectList"></ul>
+            <p class="empty-hint" id="emptyHint" style="display:none;">暂无项目，上方创建后即可在项目内选卦、与阴对话。</p>
+          </section>
+        </div>
+      </div>
+      <div class="resizer-v" id="resizerV" title="拖动调整宽度"></div>
+      <div class="page-right">
+        <section class="section-yin-chat">
+          <h2>与阴对话<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
+          <div class="yin-chat-input-row">
+            <input type="text" id="yinChatInput" placeholder="输入消息与阴对话…" maxlength="2000" />
+            <button type="button" class="yin-chat-send" id="yinChatSend">发送</button>
+          </div>
+          <div class="yin-chat-messages" id="yinChatMessages"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    (function initStarfield() {
+      var container = document.getElementById('starfield');
+      if (!container) return;
+      for (var i = 0; i < 40; i++) {
+        var el = document.createElement('div');
+        el.className = 'star';
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.top = (Math.random() * 100) + '%';
+        el.style.width = (1 + Math.random() * 2) + 'px';
+        el.style.height = el.style.width;
+        el.style.opacity = 0.4 + Math.random() * 0.4;
+        el.style.setProperty('--dur', (1.5 + Math.random() * 2) + 's');
+        el.style.setProperty('--delay', (Math.random() * 2) + 's');
+        container.appendChild(el);
+      }
+    })();
+
+    var toast = document.getElementById('toast');
+    var listEl = document.getElementById('projectList');
+    var emptyHint = document.getElementById('emptyHint');
+    var newNameInput = document.getElementById('newProjectName');
+    var btnCreate = document.getElementById('btnCreate');
+    var rowYinyang = document.getElementById('rowYinyang');
+    var yinChatMessages = document.getElementById('yinChatMessages');
+    var yinChatInput = document.getElementById('yinChatInput');
+    var yinChatSend = document.getElementById('yinChatSend');
+    var resizerV = document.getElementById('resizerV');
+    var CHAT_STORAGE_KEY = 'yin_chat_history_projects';
+    var YIN_SERVER_PROJECT_ID = 'global'; // 列表页阴对话用固定的 global 项目ID持久化
+
+    async function fetchRobots() {
+      try {
+        const r = await fetch('/api/robots');
+        if (r.ok) return await r.json();
+      } catch (_) {}
+      return [
+        { id: 'main', name: '主', gateway: 'ws://127.0.0.1:18789', running: false },
+        { id: 'lan', name: 'lan', gateway: 'ws://127.0.0.1:18790', running: false },
+      ];
+    }
+
+    function updateYinyangState(robots) {
+      if (!rowYinyang) return;
+      const byId = {};
+      (robots || []).forEach(function(r) { byId[r.id] = r; });
+      rowYinyang.querySelectorAll('.taiji-dot').forEach(function(btn) {
+        const r = byId[btn.dataset.robot];
+        const isRunning = !!r && !!r.running;
+        btn.classList.toggle('running', isRunning);
+        if (isRunning) {
+          btn.classList.remove('starting');
+          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击停止';
+        } else {
+          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击启动';
+        }
+      });
+    }
+
+    // 绑定阴阳按钮：点击切换启动/停止
+    if (rowYinyang) {
+      rowYinyang.querySelectorAll('.taiji-dot').forEach(function(btn) {
+        const robotId = btn.dataset.robot;
+        btn.addEventListener('click', async function() {
+          const robots = await fetchRobots();
+          const robot = robots.find(function(r) { return r.id === robotId; });
+          const isRunning = !!(robot && robot.running);
+          if (isRunning) {
+            // 运行中：点击停止
+            btn.disabled = true;
+            try {
+              const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
+              const data = await r.json().catch(function() { return {}; });
+              if (r.ok && !data.error) {
+                show('已停止');
+                const next = await fetchRobots();
+                updateYinyangState(next);
+              } else {
+                show(data.error || '停止失败');
+              }
+            } catch (e) {
+              show('请求失败: ' + (e.message || ''));
+            }
+            btn.disabled = false;
+          } else {
+            // 未运行：点击启动
+            btn.classList.add('starting');
+            try {
+              const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
+              const data = await r.json().catch(function() { return {}; });
+              if (r.ok && !data.error) {
+                show('已弹出终端');
+              } else {
+                show(data.error || '启动失败 (HTTP ' + r.status + ')');
+                btn.classList.remove('starting');
+              }
+            } catch (e) {
+              show('请求失败: ' + (e.message || ''));
+              btn.classList.remove('starting');
+            }
+          }
+        });
+      });
+    }
+    fetch('/api/robots').then(function(r) { return r.json(); }).then(updateYinyangState).catch(function() {});
+    // 定期刷新阴阳状态
+    setInterval(async function() {
+      const robots = await fetchRobots();
+      updateYinyangState(robots);
+    }, 1000);
+
+    function show(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 3000);
+    }
+
+    function renderList(projects) {
+      listEl.innerHTML = '';
+      if (!projects || projects.length === 0) {
+        emptyHint.style.display = 'block';
+        return;
+      }
+      emptyHint.style.display = 'none';
+      projects.forEach(function(p) {
+        var li = document.createElement('li');
+        var card = document.createElement('div');
+        card.className = 'project-card';
+        // 名字区域（可点击内联编辑）
+        var cardLeft = document.createElement('div');
+        cardLeft.className = 'card-link';
+        cardLeft.style.cursor = 'default';
+        var nameSpan = document.createElement('span');
+        nameSpan.className = 'name';
+        nameSpan.textContent = p.name;
+        nameSpan.title = '点击编辑名称';
+        var metaSpan = document.createElement('span');
+        metaSpan.className = 'meta';
+        metaSpan.textContent = '卦象 ' + (p.hexIds && p.hexIds.length ? p.hexIds.length + ' 个' : '未选');
+        // 点击名字跳转，双击编辑
+        nameSpan.addEventListener('click', function(e) {
+          e.stopPropagation();
+          // 切换到 input
+          var input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'name-input';
+          input.value = p.name;
+          nameSpan.replaceWith(input);
+          input.focus();
+          input.select();
+          function saveRename() {
+            var newName = input.value.trim();
+            if (!newName || newName === p.name) {
+              input.replaceWith(nameSpan);
+              return;
+            }
+            fetch('/api/projects/' + encodeURIComponent(p.id), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: newName })
+            })
+              .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+              .then(function(result) {
+                if (result.ok) {
+                  p.name = result.data.name;
+                  nameSpan.textContent = result.data.name;
+                  show('已重命名为：' + result.data.name);
+                } else {
+                  show(result.data.error || '重命名失败');
+                }
+                input.replaceWith(nameSpan);
+              })
+              .catch(function() { show('请求失败'); input.replaceWith(nameSpan); });
+          }
+          input.addEventListener('blur', saveRename);
+          input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { input.blur(); }
+            if (e.key === 'Escape') { input.value = p.name; input.blur(); }
+          });
+        });
+        // 点击卡片其他区域跳转
+        cardLeft.addEventListener('click', function(e) {
+          if (e.target === nameSpan || e.target.classList.contains('name-input')) return;
+          window.location.href = 'project.html?id=' + encodeURIComponent(p.id);
+        });
+        cardLeft.appendChild(nameSpan);
+        cardLeft.appendChild(metaSpan);
+        card.appendChild(cardLeft);
+
+        var actions = document.createElement('div');
+        actions.className = 'card-actions';
+        var btnDelete = document.createElement('button');
+        btnDelete.type = 'button';
+        btnDelete.className = 'btn-card-action btn-delete';
+        btnDelete.textContent = '删除';
+        actions.appendChild(btnDelete);
+        card.appendChild(actions);
+        li.appendChild(card);
+        listEl.appendChild(li);
+
+        btnDelete.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!confirm('确定删除项目「' + p.name + '」？')) return;
+          fetch('/api/projects/' + encodeURIComponent(p.id), { method: 'DELETE' })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(result) {
+              if (result.ok) {
+                show('已删除');
+                loadProjects();
+              } else {
+                show(result.data.error || '删除失败');
+              }
+            })
+            .catch(function() { show('请求失败'); });
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      var div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function loadProjects() {
+      return fetch('/api/projects')
+        .then(function(r) { return r.json(); })
+        .then(function(projects) {
+          renderList(projects);
+          return projects;
+        })
+        .catch(function() { 
+          show('加载项目列表失败');
+          return [];
+        });
+    }
+
+    btnCreate.addEventListener('click', function() {
+      var name = (newNameInput.value || '').trim();
+      if (!name) {
+        show('请输入项目名称');
+        return;
+      }
+      btnCreate.disabled = true;
+      fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+      })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(result) {
+          if (result.ok) {
+            newNameInput.value = '';
+            show('已创建：' + result.data.name);
+            // 刷新列表，然后跳转到项目页面
+            loadProjects().then(function() {
+              setTimeout(function() {
+                window.location.href = 'project.html?id=' + encodeURIComponent(result.data.id);
+              }, 200);
+            });
+          } else {
+            show(result.data.error || '创建失败');
+          }
+        })
+        .catch(function() { show('请求失败'); })
+        .then(function() { btnCreate.disabled = false; });
+    });
+    newNameInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') btnCreate.click();
+    });
+
+    // 右侧与阴对话（列表页，使用 global 固定 projectId 持久化到服务端）
+    var _yinChatCache = []; // 内存缓存，避免频繁序列化 DOM
+    function saveYinChatHistory() {
+      fetch('/api/chat-history/' + YIN_SERVER_PROJECT_ID + '/yin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: _yinChatCache })
+      }).catch(function() {});
+      try { localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(_yinChatCache)); } catch (e) {}
+    }
+    function loadYinChatHistory() {
+      if (!yinChatMessages) return;
+      fetch('/api/chat-history/' + YIN_SERVER_PROJECT_ID + '/yin')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var msgs = (data && Array.isArray(data.messages)) ? data.messages : [];
+          if (msgs.length > 0) {
+            _yinChatCache = msgs;
+            msgs.forEach(function(msg) { appendYinChatMsg(msg.role, msg.text, false); });
+          } else {
+            // 降级到 localStorage
+            try {
+              var stored = localStorage.getItem(CHAT_STORAGE_KEY);
+              if (stored) {
+                var lsMsgs = JSON.parse(stored);
+                _yinChatCache = lsMsgs;
+                lsMsgs.forEach(function(msg) { appendYinChatMsg(msg.role, msg.text, false); });
+              }
+            } catch (e) {}
+          }
+        })
+        .catch(function() {
+          try {
+            var stored = localStorage.getItem(CHAT_STORAGE_KEY);
+            if (stored) {
+              var lsMsgs = JSON.parse(stored);
+              _yinChatCache = lsMsgs;
+              lsMsgs.forEach(function(msg) { appendYinChatMsg(msg.role, msg.text, false); });
+            }
+          } catch (e) {}
+        });
+    }
+    function getYinHistoryForAPI() {
+      return _yinChatCache.slice(-15);
+    }
+    function appendYinChatMsg(role, text, save) {
+      if (save === undefined) save = true;
+      if (!yinChatMessages) return;
+      var div = document.createElement('div');
+      div.className = 'yin-chat-msg ' + role;
+      var who = role === 'user' ? '我' : '阴';
+      var textHtml = role === 'user' ? escapeHtml(text) : ('<span class="yin-chat-md">' + (typeof marked !== 'undefined' ? marked.parse(String(text || ''), { breaks: true, gfm: true }) : escapeHtml(text)) + '</span>');
+      div.innerHTML = '<span class="who">' + escapeHtml(who) + '</span>' + textHtml;
+      yinChatMessages.appendChild(div);
+      yinChatMessages.scrollTop = yinChatMessages.scrollHeight;
+      if (save) {
+        _yinChatCache.push({ role: role, text: text });
+        saveYinChatHistory();
+      }
+    }
+    if (yinChatSend && yinChatInput) {
+      yinChatSend.addEventListener('click', function() {
+        var text = (yinChatInput.value || '').trim();
+        if (!text) return;
+        yinChatInput.value = '';
+        appendYinChatMsg('user', text);
+        yinChatSend.disabled = true;
+        fetch('/api/yin/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, projectId: YIN_SERVER_PROJECT_ID, history: getYinHistoryForAPI() })
+        })
+          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+          .then(function(result) {
+            var reply = (result.data && result.data.reply != null) ? result.data.reply : null;
+            if (reply) {
+              appendYinChatMsg('yin', reply);
+            } else if (result.status === 501 || (result.data && result.data.error && (result.data.error + '').indexOf('未配置') !== -1)) {
+              appendYinChatMsg('yin', '（阴对话接口未配置。请在面板服务端设置 YIN_CHAT_URL 后重试。）');
+            } else {
+              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + (result.data && result.data.error ? result.data.error : '请求失败') + '）');
+            }
+          })
+          .catch(function() {
+            appendYinChatMsg('yin', '（请求失败）');
+          })
+          .then(function() { yinChatSend.disabled = false; });
+      });
+      yinChatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') yinChatSend.click();
+      });
+    }
+    loadYinChatHistory();
+
+    var yinChatClearBtn = document.getElementById('yinChatClearBtn');
+    if (yinChatClearBtn) {
+      yinChatClearBtn.addEventListener('click', function() {
+        if (!confirm('确定清空与阴的全部聊天记录？')) return;
+        if (yinChatMessages) yinChatMessages.innerHTML = '';
+        _yinChatCache = [];
+        try { localStorage.removeItem(CHAT_STORAGE_KEY); } catch (e) {}
+        fetch('/api/chat-history/' + YIN_SERVER_PROJECT_ID + '/yin', { method: 'DELETE' }).catch(function() {});
+      });
+    }
+
+    // 拖动调整左侧宽度
+    if (resizerV) {
+      var startX = 0, startW = 0;
+      function onResizeStart(e) {
+        e.preventDefault();
+        startX = e.clientX;
+        startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--left-width') || '360', 10);
+        document.addEventListener('mousemove', onResizeMove);
+        document.addEventListener('mouseup', onResizeEnd);
+      }
+      function onResizeMove(e) {
+        var dx = e.clientX - startX;
+        var w = Math.max(280, Math.min(560, startW + dx));
+        document.documentElement.style.setProperty('--left-width', w + 'px');
+      }
+      function onResizeEnd() {
+        document.removeEventListener('mousemove', onResizeMove);
+        document.removeEventListener('mouseup', onResizeEnd);
+      }
+      resizerV.addEventListener('mousedown', onResizeStart);
+    }
+
+    loadProjects();
+  </script>
+</body>
+</html>

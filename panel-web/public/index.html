@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>六十四卦 · 机器人 TUI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black: #000000;
+      --black-light: #0c0c0c;
+      --white: #f0eeec;
+      --white-dim: #a8a6a4;
+      --gold: #c9a227;
+      --gold-dim: #9a7b20;
+      --text: var(--white);
+      --text-dim: var(--white-dim);
+      --border: rgba(201, 162, 39, 0.3);
+      --glow: rgba(201, 162, 39, 0.45);
+      --run-glow: rgba(201, 162, 39, 0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Serif SC", "PingFang SC", serif;
+      background: #000000;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    /* 星空背景：纯黑基底 + 随机星点层 */
+    #starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 228, 200, 0.88);
+      animation: star-breathe var(--dur, 2.5s) ease-in-out var(--delay, 0s) infinite;
+    }
+    @keyframes star-breathe {
+      0%, 100% { filter: brightness(0.7); }
+      50% { filter: brightness(1.05); }
+    }
+    .page-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      padding: 28px 24px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .header {
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 640px;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .header-center {
+      text-align: center;
+      flex: 1;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      color: var(--gold);
+      letter-spacing: 0.2em;
+    }
+    .header .sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.35em;
+    }
+    .yin-status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin: 4px 0 0;
+      letter-spacing: 0.05em;
+    }
+    .yin-status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.4s;
+    }
+    .yin-status-dot.online { background: #4caf82; box-shadow: 0 0 6px #4caf82aa; animation: status-dot-breathe 2s ease-in-out infinite; }
+    .yin-status-dot.offline { background: #e05a5a; box-shadow: none; }
+    .btn-header-project {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--black-light);
+      color: var(--gold);
+      font-size: 1.5rem;
+      line-height: 1;
+      text-decoration: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .btn-header-project:hover {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 12px var(--glow);
+    }
+    .monitor {
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 28px;
+      padding: 14px 20px;
+      border-radius: 4px;
+      background: var(--black-light);
+      border: 1px solid var(--border);
+      font-size: 0.8rem;
+      box-shadow: 0 0 24px rgba(0,0,0,0.3);
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+    /* 告警：边框红光，国际 SOS 呼吸频率（3 短 3 长 3 短，约 8 秒一周期） */
+    .monitor.monitor--alert {
+      animation: sos-border 8s ease-in-out infinite;
+    }
+    @keyframes sos-border {
+      0%, 2.5%, 5%, 7.5%, 10% { box-shadow: 0 0 0 2px rgba(220,50,50,0.95), 0 0 20px rgba(220,50,50,0.4); border-color: rgba(220,50,50,0.9); }
+      12%, 15% { box-shadow: 0 0 24px rgba(0,0,0,0.3); border-color: var(--border); }
+      20%, 35%, 50%, 65%, 80% { box-shadow: 0 0 0 2px rgba(220,50,50,0.95), 0 0 20px rgba(220,50,50,0.4); border-color: rgba(220,50,50,0.9); }
+      82%, 85% { box-shadow: 0 0 24px rgba(0,0,0,0.3); border-color: var(--border); }
+      87%, 89%, 91%, 93%, 95% { box-shadow: 0 0 0 2px rgba(220,50,50,0.95), 0 0 20px rgba(220,50,50,0.4); border-color: rgba(220,50,50,0.9); }
+      97%, 100% { box-shadow: 0 0 24px rgba(0,0,0,0.3); border-color: var(--border); }
+    }
+    .monitor h3 {
+      margin: 0 0 10px 0;
+      font-size: 0.8rem;
+      color: var(--gold-dim);
+      font-weight: 500;
+      letter-spacing: 0.1em;
+    }
+    .monitor p.desc {
+      margin: 0 0 10px 0;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      line-height: 1.4;
+    }
+    .monitor-row { display: flex; justify-content: space-between; margin: 5px 0; }
+    .monitor .warn { color: var(--gold); }
+    .monitor .danger { color: var(--gold); font-weight: 600; }
+    .monitor .warnings { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+    /* 阴阳：静态白线太极图，中间两枚不动圆点为按钮（阴/阳） */
+    .row-yinyang {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .taiji-wrap {
+      position: relative;
+      width: 200px;
+      height: 200px;
+    }
+    .taiji-wrap svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* 阴阳鱼：纯黑 #000000 / 纯白 #FFFFFF，鱼眼反色；外发光 + 呼吸光效 */
+    .taiji-wrap {
+      filter: drop-shadow(0 0 24px rgba(255,255,255,0.25));
+      animation: taiji-glow-breathe 4s ease-in-out infinite;
+    }
+    @keyframes taiji-glow-breathe {
+      0%, 100% { filter: drop-shadow(0 0 20px rgba(255,255,255,0.2)) drop-shadow(0 0 50px rgba(255,255,255,0.12)); }
+      50% { filter: drop-shadow(0 0 32px rgba(255,255,255,0.35)) drop-shadow(0 0 70px rgba(255,255,255,0.2)); }
+    }
+    .taiji-wrap svg .half { stroke: none; }
+    .taiji-wrap svg .half-white { fill: #FFFFFF; }
+    .taiji-wrap svg .half-black { fill: #000000; }
+    .taiji-wrap svg .stroke { fill: none; stroke: rgba(255,255,255,0.5); stroke-width: 1; }
+    .taiji-wrap svg .eye-white { fill: #FFFFFF; }
+    .taiji-wrap svg .eye-black { fill: #000000; }
+    /* 两枚圆点按钮：一黑一白。黑按钮所在那一半为白底，白按钮所在那一半为黑底 */
+    .taiji-dot {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: box-shadow 0.2s, background 0.2s;
+    }
+    /* 未点击时透明，悬停略显 */
+    .taiji-dot[data-robot="main"] { left: 50%; top: 32%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="lan"] { left: 50%; top: 68%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="main"]:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot[data-robot="lan"]:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot.running { }
+    /* 点击后：原黑钮(阴)变白+白呼吸光，原白钮(阳)变黑+黑呼吸光 */
+    .taiji-dot[data-robot="main"].running {
+      background: #f0ece8;
+      animation: breathe-dot-white 2s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="lan"].running {
+      background: #0a0a0e;
+      animation: breathe-dot-black 2s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="main"].starting {
+      background: #f0ece8;
+      animation: breathe-dot-white 1.5s ease-in-out infinite;
+    }
+    .taiji-dot[data-robot="lan"].starting {
+      background: #0a0a0e;
+      animation: breathe-dot-black 1.5s ease-in-out infinite;
+    }
+    @keyframes breathe-dot-black {
+      0%, 100% { box-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 16px rgba(40,40,55,0.5); }
+      50% { box-shadow: 0 0 18px rgba(0,0,0,0.95), 0 0 28px rgba(50,50,70,0.6); }
+    }
+    @keyframes breathe-dot-white {
+      0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 32px rgba(255,255,255,0.5); }
+    }
+
+    /* 六十四卦：8 列网格，背景若隐若现呼吸的八卦 */
+    .section-hexagrams {
+      width: 100%;
+      max-width: 920px;
+      position: relative;
+      padding: 20px 0;
+    }
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .section-hexagrams .label {
+      font-size: 0.8rem;
+      color: var(--gold-dim);
+      letter-spacing: 0.2em;
+      margin: 0;
+      text-align: center;
+    }
+    .btn-start-first-10 {
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      color: var(--black);
+      background: var(--gold);
+      border: 1px solid var(--gold-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.1em;
+    }
+    .btn-start-first-10:hover {
+      background: var(--gold-dim);
+      color: var(--white);
+    }
+    .btn-start-first-10:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-close-all-terminals {
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      color: var(--white);
+      background: rgba(80, 80, 80, 0.85);
+      border: 1px solid rgba(120, 120, 120, 0.6);
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.1em;
+      margin-left: 8px;
+    }
+    .btn-close-all-terminals:hover {
+      background: rgba(100, 100, 100, 0.95);
+    }
+    .btn-close-all-terminals:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .grid-64 {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 10px;
+      justify-items: center;
+    }
+    .card-hex {
+      position: relative;
+      width: 100%;
+      max-width: 100px;
+      padding: 10px 8px;
+      border-radius: 6px;
+      background: rgba(18, 18, 20, 0.55);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .card-hex .status-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b6b6b;
+      transition: background 0.2s;
+    }
+    .card-hex .status-dot.running {
+      background: var(--gold);
+      animation: status-dot-breathe 2s ease-in-out infinite;
+    }
+    @keyframes status-dot-breathe {
+      0%, 100% { opacity: 0.85; box-shadow: 0 0 4px var(--gold); }
+      50% { opacity: 1; box-shadow: 0 0 10px var(--gold); }
+    }
+    .card-hex:hover {
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 16px rgba(212, 168, 75, 0.15);
+    }
+    .card-hex.starting {
+      animation: breathe 1.2s ease-in-out infinite;
+    }
+    .card-hex.running {
+      box-shadow: 0 0 14px var(--run-glow);
+      border-color: rgba(212, 168, 75, 0.5);
+    }
+    @keyframes breathe {
+      0%, 100% { box-shadow: 0 0 12px var(--breathe-color, var(--glow)); opacity: 1; }
+      50% { box-shadow: 0 0 28px var(--breathe-color, var(--glow)); opacity: 0.95; }
+    }
+    .card-hex .card-title {
+      font-family: "ZCOOL KuaiLe", "Noto Serif SC", serif;
+      font-size: 1rem;
+      font-weight: 500;
+      margin: 0;
+      color: var(--text);
+    }
+    .card-hex .card-gateway { font-size: 0.6rem; color: var(--text-dim); margin: 0; text-align: center; word-break: break-all; }
+    .card-hex .card-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+    .card-hex .btn-start,
+    .card-hex .btn-stop {
+      padding: 6px 14px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-family: inherit;
+      transition: filter 0.2s;
+    }
+    .card-hex .btn-start {
+      border: none;
+      background: var(--gold);
+      color: var(--black);
+    }
+    .card-hex .btn-start:hover { filter: brightness(1.15); }
+    .card-hex .btn-stop {
+      display: none;
+      border: 1px solid rgba(220, 80, 80, 0.6);
+      background: transparent;
+      color: #dc5050;
+    }
+    .card-hex .btn-stop:hover { filter: brightness(1.2); }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 6px;
+      background: var(--black-light);
+      border: 1px solid var(--gold-dim);
+      color: var(--gold);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 900px) {
+      .grid-64 { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 520px) {
+      .row-yinyang { flex-direction: column; align-items: center; }
+      .grid-64 { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .card-hex { max-width: 72px; padding: 8px 6px; }
+      .card-hex .card-title { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <div id="starfield" aria-hidden="true"></div>
+  <div class="page-content">
+  <div class="header">
+    <div class="header-row">
+      <span></span>
+      <div class="header-center">
+        <h1>六十四卦</h1>
+        <p class="sub">· 机器人 TUI ·</p>
+        <p class="yin-status-bar" id="yinStatusBar">
+          <span class="yin-status-dot" id="yinStatusDot"></span>
+          <span id="yinStatusText">阴 · 检测中…</span>
+        </p>
+      </div>
+      <span style="display:flex;gap:8px;align-items:center;">
+        <a href="config.html" class="btn-header-project" title="配置" style="font-size:0.9rem;">⚙</a>
+        <a href="projects.html" class="btn-header-project" title="项目空间">+</a>
+      </span>
+    </div>
+  </div>
+  <div class="monitor" id="monitor">
+    <h3>本机系统负载 · 多开参考</h3>
+    <div class="monitor-row">内存: <span id="mem">--</span></div>
+    <div class="monitor-row">CPU 使用率: <span id="cpuPct">--</span></div>
+    <div class="monitor-row">CPU 负载 (1/5 min): <span id="load">--</span></div>
+    <div class="monitor-row">CPU 核数: <span id="cpus">--</span></div>
+    <div class="monitor-row">交换已用: <span id="swap">—</span></div>
+    <div class="monitor-row" style="color:var(--text-dim);font-size:0.75rem;">每 5 秒刷新 · 上次 <span id="updated">--</span></div>
+    <div class="warnings" id="warnings"></div>
+  </div>
+
+  <div class="row-yinyang" id="rowYinyang">
+    <div class="taiji-wrap">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <!-- 上半：白鱼，鱼眼为黑 -->
+        <path class="half half-white" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100 A50 50 0 0 0 50 0"/>
+        <!-- 下半：黑鱼，鱼眼为白 -->
+        <path class="half half-black" d="M50 100 A25 25 0 0 1 50 50 A25 25 0 0 0 50 0 A50 50 0 0 0 50 100"/>
+        <circle class="eye-black" cx="50" cy="25" r="5"/>
+        <circle class="eye-white" cx="50" cy="75" r="5"/>
+        <circle class="stroke" cx="50" cy="50" r="50"/>
+        <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
+      </svg>
+      <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
+      <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
+    </div>
+  </div>
+  <div class="section-hexagrams">
+    <div class="label-row">
+      <p class="label" id="hexLabel">卦象 · 已启动 0</p>
+      <button type="button" class="btn-start-first-10" id="btnStartFirst10" title="一次性启动乾、坤、泰、否、谦、豫、随、蛊、临、观">一键启动前10卦</button>
+      <button type="button" class="btn-close-all-terminals" id="btnCloseAllTerminals" title="关闭 64 卦中由面板打开的所有终端窗口（不停止网关）">一键关闭所有终端</button>
+    </div>
+    <div class="grid-64" id="grid64"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    // 未配置 API Key 时跳转到配置页
+    (function checkConfig() {
+      fetch('/api/config').then(function(r) { return r.json(); }).then(function(c) {
+        if (!c || !c.apiKey || (typeof c.apiKey === 'string' && !c.apiKey.trim())) {
+          if (!/config\.html/.test(window.location.pathname + window.location.search)) {
+            window.location.replace('config.html');
+          }
+        }
+      }).catch(function() {});
+    })();
+
+    (function initStarfield() {
+      var container = document.getElementById('starfield');
+      if (!container) return;
+      var count = 60;
+      for (var i = 0; i < count; i++) {
+        var el = document.createElement('div');
+        el.className = 'star';
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.top = (Math.random() * 100) + '%';
+        var size = 1.5 + Math.random() * 2.5;
+        el.style.width = size + 'px';
+        el.style.height = size + 'px';
+        el.style.opacity = [0.35, 0.5, 0.6, 0.75][Math.floor(Math.random() * 4)];
+        el.style.setProperty('--dur', (1 + Math.random() * 3).toFixed(2) + 's');
+        el.style.setProperty('--delay', (Math.random() * 2).toFixed(2) + 's');
+        container.appendChild(el);
+      }
+    })();
+
+    const toast = document.getElementById('toast');
+    const rowYinyang = document.getElementById('rowYinyang');
+    const grid64 = document.getElementById('grid64');
+
+    function show(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 3000);
+    }
+
+    function updateMonitor() {
+      fetch('/api/system').then(r => r.json()).then(d => {
+        document.getElementById('mem').textContent = (d.memoryUsedPercent != null ? d.memoryUsedPercent : '—') + '% (' + (d.memoryUsedMB ?? '—') + ' / ' + (d.memoryTotalMB ?? '—') + ' MB)';
+        var cpuPctEl = document.getElementById('cpuPct');
+        if (cpuPctEl) cpuPctEl.textContent = (d.cpuUsagePercent != null ? d.cpuUsagePercent + '%' : '—');
+        document.getElementById('load').textContent = (d.loadAvg1 != null ? d.loadAvg1 : '—') + ' / ' + (d.loadAvg5 != null ? d.loadAvg5 : '—');
+        document.getElementById('cpus').textContent = (d.cpus != null && d.cpus > 0) ? d.cpus : '—';
+        const swapEl = document.getElementById('swap');
+        if (swapEl) swapEl.textContent = d.swapUsedMB != null ? d.swapUsedMB + ' MB' : '—';
+        document.getElementById('updated').textContent = new Date().toLocaleTimeString('zh-CN');
+        const monEl = document.getElementById('monitor');
+        if (monEl) monEl.classList.toggle('monitor--alert', !!d.alert);
+        const wEl = document.getElementById('warnings');
+        if (d.warnings && d.warnings.length) {
+          wEl.innerHTML = d.warnings.map(w => '<div class="' + w.level + '">⚠ ' + w.text + '</div>').join('');
+          wEl.style.display = 'block';
+        } else {
+          wEl.innerHTML = '';
+          wEl.style.display = 'none';
+        }
+      }).catch(() => {});
+    }
+    setInterval(updateMonitor, 5000);
+    updateMonitor();
+
+    function displayName(robot) {
+      if (robot.id === 'main') return '阴';
+      if (robot.id === 'lan') return '阳';
+      return robot.name;
+    }
+
+    function updateCardsRunning(robots) {
+      const byId = {};
+      robots.forEach(r => { byId[r.id] = r; });
+      const hexRunning = robots.filter(r => r.id !== 'main' && r.id !== 'lan' && r.running).length;
+      const labelEl = document.getElementById('hexLabel');
+      if (labelEl) labelEl.textContent = '卦象 · 已启动 ' + hexRunning;
+      rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
+        const r = byId[btn.dataset.robot];
+        const isRunning = !!r && !!r.running;
+        btn.classList.toggle('running', isRunning);
+        if (isRunning) {
+          btn.classList.remove('starting');
+          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击停止';
+        } else {
+          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击启动';
+        }
+      });
+      grid64.querySelectorAll('.card-hex').forEach(card => {
+        var robotId = card.dataset.robot;
+        if (!robotId) return;
+        var r = byId[robotId];
+        var running = !!(r && r.running);
+        card.classList.toggle('running', running);
+        if (running) card.classList.remove('starting');
+        var dot = card.querySelector('.status-dot');
+        if (dot) {
+          dot.classList.toggle('running', running);
+          dot.setAttribute('aria-label', running ? '运行中' : '未运行');
+        }
+        var startBtn = card.querySelector('.btn-start');
+        var stopBtn = card.querySelector('.btn-stop');
+        if (startBtn) startBtn.style.display = running ? 'none' : 'inline-block';
+        if (stopBtn) stopBtn.style.display = running ? 'inline-block' : 'none';
+      });
+    }
+
+    function bindStart(targetEl, btn, robotId) {
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        (targetEl || btn).classList.add('starting');
+        try {
+          const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && !data.error) {
+            show('已弹出终端');
+          } else {
+            show(data.error || '启动失败 (HTTP ' + r.status + ')');
+            (targetEl || btn).classList.remove('starting');
+          }
+        } catch (e) {
+          show('请求失败: ' + (e.message || ''));
+          (targetEl || btn).classList.remove('starting');
+        }
+      });
+    }
+    function bindStop(targetEl, btn, robotId) {
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && !data.error) {
+            show('已停止');
+            var next = await fetchRobots();
+            updateCardsRunning(next);
+          } else {
+            show(data.error || '停止失败');
+          }
+        } catch (e) {
+          show('请求失败: ' + (e.message || ''));
+        }
+        btn.disabled = false;
+      });
+    }
+
+    async function fetchRobots(nocache) {
+      try {
+        const url = nocache ? '/api/robots?nocache=1' : '/api/robots';
+        const r = await fetch(url);
+        if (r.ok) return await r.json();
+      } catch (_) {}
+      return [
+        { id: 'main', name: '主', gateway: 'ws://127.0.0.1:18789', running: false },
+        { id: 'lan', name: 'lan', gateway: 'ws://127.0.0.1:18790', running: false },
+      ];
+    }
+
+    async function render() {
+      let robots = await fetchRobots();
+      const hexagrams = robots.filter(r => r.id !== 'main' && r.id !== 'lan');
+
+      rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
+        const robotId = btn.dataset.robot;
+        btn.addEventListener('click', async () => {
+          const robots = await fetchRobots();
+          const robot = robots.find(r => r.id === robotId);
+          const isRunning = !!(robot && robot.running);
+          if (isRunning) {
+            // 运行中：点击停止
+            btn.disabled = true;
+            try {
+              const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
+              const data = await r.json().catch(() => ({}));
+              if (r.ok && !data.error) {
+                show('已停止');
+                var next = await fetchRobots();
+                updateCardsRunning(next);
+              } else {
+                show(data.error || '停止失败');
+              }
+            } catch (e) {
+              show('请求失败: ' + (e.message || ''));
+            }
+            btn.disabled = false;
+          } else {
+            // 未运行：点击启动
+            btn.classList.add('starting');
+            try {
+              const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
+              const data = await r.json().catch(() => ({}));
+              if (r.ok && !data.error) {
+                show('已弹出终端');
+              } else {
+                show(data.error || '启动失败 (HTTP ' + r.status + ')');
+                btn.classList.remove('starting');
+              }
+            } catch (e) {
+              show('请求失败: ' + (e.message || ''));
+              btn.classList.remove('starting');
+            }
+          }
+        });
+      });
+
+      grid64.innerHTML = hexagrams.map(robot => `
+        <div class="card-hex" data-robot="${robot.id}" data-port="${robot.port != null ? robot.port : ''}">
+          <span class="status-dot${robot.running ? ' running' : ''}" aria-label="${robot.running ? '运行中' : '未运行'}"></span>
+          <p class="card-title">${robot.name}</p>
+          <p class="card-gateway">${(robot.gateway || '').replace('ws://', '')}</p>
+          <div class="card-actions">
+            <button type="button" class="btn-start" data-action="start">启动</button>
+            <button type="button" class="btn-stop" data-action="stop">停止</button>
+          </div>
+        </div>
+      `).join('');
+      // 事件委托：点哪张卡用哪张卡的 robot/port，避免谦/蛊错位、坤/泰点不动
+      grid64.addEventListener('click', async function(e) {
+        const card = e.target.closest('.card-hex');
+        if (!card) return;
+        const robotId = card.dataset.robot;
+        const port = card.dataset.port;
+        const startBtn = e.target.closest('.btn-start');
+        const stopBtn = e.target.closest('.btn-stop');
+        if (startBtn) {
+          card.classList.add('starting');
+          try {
+            const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
+            const data = await r.json().catch(() => ({}));
+            if (r.ok && !data.error) show('已弹出终端');
+            else { show(data.error || '启动失败'); card.classList.remove('starting'); }
+          } catch (err) { show('请求失败: ' + (err.message || '')); card.classList.remove('starting'); }
+        } else if (stopBtn) {
+          stopBtn.disabled = true;
+          try {
+            const body = (port && port !== '') ? { port: parseInt(port, 10) } : {};
+            const r = await fetch('/api/stop/' + robotId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const data = await r.json().catch(() => ({}));
+            if (r.ok && !data.error) {
+              show('已停止');
+              var next = await fetchRobots();
+              updateCardsRunning(next);
+            } else show(data.error || '停止失败');
+          } catch (err) { show('请求失败: ' + (err.message || '')); }
+          stopBtn.disabled = false;
+        }
+      });
+
+      updateCardsRunning(robots);
+      // 智能轮询：有卦处于过渡状态（starting）时 1s，否则 5s
+      let _pollTimer = null;
+      function schedulePoll() {
+        var hasStarting = !!document.querySelector('.card-hex.starting, .taiji-dot.starting');
+        var interval = hasStarting ? 1000 : 5000;
+        _pollTimer = setTimeout(async function() {
+          const next = await fetchRobots();
+          updateCardsRunning(next);
+          schedulePoll();
+        }, interval);
+      }
+      schedulePoll();
+    }
+
+    const btnStartFirst10 = document.getElementById('btnStartFirst10');
+    if (btnStartFirst10) {
+      btnStartFirst10.addEventListener('click', async () => {
+        btnStartFirst10.disabled = true;
+        show('正在启动前10卦，请稍候…');
+        try {
+          const r = await fetch('/api/start-first-10', { method: 'POST' });
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && data.ok) {
+            const n = (data.started && data.started.length) || 0;
+            const failed = (data.failed && data.failed.length) || 0;
+            if (failed) {
+              show('已启动 ' + n + ' 个，' + failed + ' 个失败');
+            } else {
+              show('已启动 ' + n + ' 个卦，终端会依次弹出');
+            }
+          } else {
+            show(data.error || '启动失败 (HTTP ' + r.status + ')');
+          }
+        } catch (e) {
+          show('请求失败: ' + (e.message || ''));
+        }
+        btnStartFirst10.disabled = false;
+      });
+    }
+
+    const btnCloseAllTerminals = document.getElementById('btnCloseAllTerminals');
+    if (btnCloseAllTerminals) {
+      btnCloseAllTerminals.addEventListener('click', async () => {
+        btnCloseAllTerminals.disabled = true;
+        try {
+          const r = await fetch('/api/close-all-hex-terminals', { method: 'POST' });
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && data.ok) {
+            const n = (data.closed != null ? data.closed : 0);
+            show(n > 0 ? '已关闭所有卦终端并停止网关，正在更新状态…' : '没有由面板打开的终端');
+            // 立即刷新（nocache），然后每500ms刷新一次，持续6次（共3秒）
+            var next = await fetchRobots(true);
+            updateCardsRunning(next);
+            var refreshCount = 0;
+            var refreshInterval = setInterval(async () => {
+              refreshCount++;
+              next = await fetchRobots(true);
+              updateCardsRunning(next);
+              if (refreshCount >= 6) {
+                clearInterval(refreshInterval);
+                show('状态已更新');
+              }
+            }, 500);
+          } else {
+            show(data.error || '关闭失败');
+          }
+        } catch (e) {
+          show('请求失败: ' + (e.message || ''));
+        }
+        btnCloseAllTerminals.disabled = false;
+      });
+    }
+
+    render();
+
+    // 阴连接状态轮询（每10秒）
+    var yinStatusDot = document.getElementById('yinStatusDot');
+    var yinStatusText = document.getElementById('yinStatusText');
+    function checkYinStatus() {
+      fetch('/api/yin/status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (yinStatusDot) { yinStatusDot.className = 'yin-status-dot online'; }
+          if (yinStatusText) { yinStatusText.textContent = '阴 · 在线'; }
+        })
+        .catch(function() {
+          if (yinStatusDot) { yinStatusDot.className = 'yin-status-dot offline'; }
+          if (yinStatusText) { yinStatusText.textContent = '阴 · 未连接'; }
+        });
+    }
+    checkYinStatus();
+    setInterval(checkYinStatus, 10000);
+  </script>
+</body>
+</html>

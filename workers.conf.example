@@ -1,0 +1,5 @@
+# 由 install.sh 自动生成，勿手动编辑
+# 格式: worker_id|state_dir|port|token
+1|hexes/乾|18791|<token>
+2|hexes/坤|18792|<token>
+...

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>首次配置 · 六十四卦</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black: #000000;
+      --black-light: #0c0c0c;
+      --white: #f0eeec;
+      --white-dim: #a8a6a4;
+      --gold: #c9a227;
+      --gold-dim: #9a7b20;
+      --text: var(--white);
+      --text-dim: var(--white-dim);
+      --border: rgba(201, 162, 39, 0.3);
+      --glow: rgba(201, 162, 39, 0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Serif SC", "PingFang SC", serif;
+      background: #000;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    #starfield {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 228, 200, 0.88);
+      animation: star-breathe var(--dur, 2.5s) ease-in-out var(--delay, 0s) infinite;
+    }
+    @keyframes star-breathe {
+      0%, 100% { filter: brightness(0.7); }
+      50% { filter: brightness(1.05); }
+    }
+    .page-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 480px;
+      padding: 40px 24px;
+    }
+    h1 {
+      font-size: 1.25rem;
+      color: var(--gold);
+      letter-spacing: 0.15em;
+      margin: 0 0 8px 0;
+      text-align: center;
+    }
+    .sub {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .form-card {
+      background: var(--black-light);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 24px rgba(0,0,0,0.3);
+    }
+    .form-row {
+      margin-bottom: 16px;
+    }
+    .form-row:last-child { margin-bottom: 0; }
+    .form-row label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--gold-dim);
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+    .form-row input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+    }
+    .form-row input:focus {
+      outline: none;
+      border-color: var(--gold-dim);
+      box-shadow: 0 0 8px var(--glow);
+    }
+    .form-row input::placeholder {
+      color: var(--text-dim);
+      opacity: 0.7;
+    }
+    .form-row select.form-select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      cursor: pointer;
+      -webkit-appearance: menulist;
+      appearance: menulist;
+      pointer-events: auto;
+    }
+    .form-row select.form-select:focus {
+      outline: none;
+      border-color: var(--gold-dim);
+    }
+    .form-row .hint {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .btn-save {
+      width: 100%;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--black);
+      background: var(--gold);
+      border: 1px solid var(--gold-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.1em;
+      transition: filter 0.2s;
+    }
+    .btn-save:hover { filter: brightness(1.1); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-check-ports {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      color: var(--gold);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+    }
+    .btn-check-ports:hover { border-color: var(--gold-dim); background: rgba(201,162,39,0.1); }
+    .port-result { margin-top: 10px; font-size: 0.8rem; color: var(--text-dim); line-height: 1.6; }
+    .port-result .free { color: #81c784; }
+    .port-result .used { color: #e57373; }
+    .link-skip {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-decoration: none;
+    }
+    .link-skip:hover { color: var(--gold-dim); }
+    .msg {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+    .msg.ok { background: rgba(76, 175, 80, 0.2); border: 1px solid rgba(76, 175, 80, 0.5); color: #81c784; }
+    .msg.err { background: rgba(220, 80, 80, 0.2); border: 1px solid rgba(220, 80, 80, 0.5); color: #e57373; }
+  </style>
+</head>
+<body>
+  <div id="starfield" aria-hidden="true"></div>
+  <div class="page-content">
+    <h1>首次配置</h1>
+    <p class="sub">选择模型提供商并填写 API Key，可正常使用阴、阳及六十四卦</p>
+    <div class="form-card">
+      <form id="configForm">
+        <div class="form-row">
+          <label for="provider">模型提供商</label>
+          <select id="provider" class="form-select"></select>
+        </div>
+        <div class="form-row">
+          <label for="modelPrimary">主模型</label>
+          <select id="modelPrimary" class="form-select"></select>
+        </div>
+        <div class="form-row" id="apiKeyRow">
+          <label for="apiKey" id="apiKeyLabel">API Key（必填）</label>
+          <input type="password" id="apiKey" name="apiKey" placeholder="sk-..." autocomplete="off" />
+          <p class="hint" id="apiKeyHint">从对应提供商控制台获取 API Key</p>
+        </div>
+        <div class="form-row">
+          <label for="portMain">主网关端口</label>
+          <input type="number" id="portMain" name="portMain" value="18789" min="1024" max="65535" />
+        </div>
+        <div class="form-row">
+          <label for="portHexStart">六十四卦起始端口</label>
+          <input type="number" id="portHexStart" name="portHexStart" value="18791" min="1024" max="65535" />
+        </div>
+        <div class="form-row">
+          <label for="panelPort">面板端口</label>
+          <input type="number" id="panelPort" name="panelPort" value="3999" min="1024" max="65535" />
+        </div>
+        <div class="form-row" style="margin-top:12px;">
+          <button type="button" class="btn-check-ports" id="btnCheckPorts">检测端口占用</button>
+          <div id="portResult" class="port-result"></div>
+        </div>
+        <button type="submit" class="btn-save" id="btnSave">保存配置</button>
+      </form>
+      <div id="msg"></div>
+    </div>
+    <a href="index.html" class="link-skip">已配置？返回主面板</a>
+  </div>
+
+  <script>
+    (function initStarfield() {
+      var container = document.getElementById('starfield');
+      if (!container) return;
+      for (var i = 0; i < 50; i++) {
+        var el = document.createElement('div');
+        el.className = 'star';
+        el.style.left = (Math.random() * 100) + '%';
+        el.style.top = (Math.random() * 100) + '%';
+        el.style.width = el.style.height = (1.5 + Math.random() * 2) + 'px';
+        el.style.opacity = [0.35, 0.5, 0.6][Math.floor(Math.random() * 3)];
+        el.style.setProperty('--dur', (1 + Math.random() * 2).toFixed(2) + 's');
+        el.style.setProperty('--delay', (Math.random() * 1.5).toFixed(2) + 's');
+        container.appendChild(el);
+      }
+    })();
+
+    var msgEl = document.getElementById('msg');
+    function showMsg(text, isErr) {
+      msgEl.textContent = text;
+      msgEl.className = 'msg ' + (isErr ? 'err' : 'ok');
+      msgEl.style.display = 'block';
+    }
+    function hideMsg() {
+      msgEl.style.display = 'none';
+    }
+
+    var hasExistingKey = false;
+    var providersData = {};
+    var fallbackProviders = {
+      zai: { id: 'zai', label: '智谱 ZAI', envKey: 'ZAI_API_KEY', url: 'https://open.bigmodel.cn', models: [{ id: 'zai/glm-5', name: 'GLM-5' }, { id: 'zai/glm-4.7', name: 'GLM-4.7' }] },
+      openai: { id: 'openai', label: 'OpenAI', envKey: 'OPENAI_API_KEY', url: 'https://platform.openai.com', models: [{ id: 'openai/gpt-4o', name: 'GPT-4o' }, { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini' }] },
+      anthropic: { id: 'anthropic', label: 'Anthropic', envKey: 'ANTHROPIC_API_KEY', url: 'https://console.anthropic.com', models: [{ id: 'anthropic/claude-opus-4-6', name: 'Claude Opus 4.6' }, { id: 'anthropic/claude-sonnet-4-5', name: 'Claude Sonnet 4.5' }] }
+    };
+
+    function fillProviderSelect() {
+      var provSel = document.getElementById('provider');
+      var data = Object.keys(providersData).length ? providersData : fallbackProviders;
+      provSel.innerHTML = Object.keys(data).map(function(k) {
+        return '<option value="' + k + '">' + (data[k].label || k) + '</option>';
+      }).join('');
+      if (provSel.options.length) {
+        provSel.selectedIndex = 0;
+        updateProviderUI(provSel.value);
+        fillModelOptions(provSel.value);
+      }
+    }
+
+    // 先立即填充兜底选项，避免空下拉无法点击
+    providersData = fallbackProviders;
+    fillProviderSelect();
+
+    fetch('/api/config').then(r => r.json()).then(function(c) {
+      if (c.providers && c.providers.length) {
+        providersData = {};
+        c.providers.forEach(function(p) { providersData[p.id] = p; });
+      }
+      fillProviderSelect();
+      if (c.apiKey) {
+        document.getElementById('apiKey').placeholder = '已配置（留空则不修改）';
+        hasExistingKey = true;
+      }
+      if (c.provider && providersData[c.provider]) {
+        document.getElementById('provider').value = c.provider;
+        updateProviderUI(c.provider);
+        fillModelOptions(c.provider);
+      }
+      if (c.modelPrimary) document.getElementById('modelPrimary').value = c.modelPrimary;
+      if (c.portMain) document.getElementById('portMain').value = c.portMain;
+      if (c.portHexStart) document.getElementById('portHexStart').value = c.portHexStart;
+      if (c.panelPort) document.getElementById('panelPort').value = c.panelPort;
+    }).catch(function() {
+      providersData = fallbackProviders;
+      fillProviderSelect();
+    });
+
+    document.getElementById('provider').addEventListener('change', function() {
+      var p = this.value;
+      updateProviderUI(p);
+      fillModelOptions(p);
+    });
+
+    function updateProviderUI(providerId) {
+      var p = providersData[providerId] || { label: providerId, url: '#' };
+      var needKey = p.envKey && p.envKey.length > 0;
+      document.getElementById('apiKeyLabel').textContent = needKey ? (p.label + ' API Key（必填）') : (p.label + '（本地无需 Key）');
+      document.getElementById('apiKeyHint').innerHTML = needKey
+        ? ('从 <a href="' + (p.url || '#') + '" target="_blank" rel="noopener" style="color:var(--gold-dim)">' + (p.label || providerId) + '</a> 控制台获取')
+        : '本地运行，无需配置 API Key';
+      document.getElementById('apiKeyRow').style.display = needKey ? 'block' : 'none';
+    }
+
+    function fillModelOptions(providerId) {
+      var sel = document.getElementById('modelPrimary');
+      var p = providersData[providerId] || providersData.zai;
+      var models = (p && p.models) || [{ id: providerId + '/default', name: '默认' }];
+      sel.innerHTML = models.map(function(m) {
+        return '<option value="' + m.id + '">' + m.name + '</option>';
+      }).join('');
+    }
+
+    document.getElementById('btnCheckPorts').addEventListener('click', function() {
+      var btn = this;
+      var portMain = parseInt(document.getElementById('portMain').value, 10) || 18789;
+      var portHexStart = parseInt(document.getElementById('portHexStart').value, 10) || 18791;
+      var panelPort = parseInt(document.getElementById('panelPort').value, 10) || 3999;
+      btn.disabled = true;
+      document.getElementById('portResult').innerHTML = '检测中…';
+      fetch('/api/config/check-ports?portMain=' + portMain + '&portHexStart=' + portHexStart + '&panelPort=' + panelPort)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var html = [];
+          ['portMain','portHexStart','panelPort'].forEach(function(k) {
+            var d = data[k];
+            var label = k === 'portMain' ? '主网关' : k === 'portHexStart' ? '卦起始' : '面板';
+            html.push('<span class="' + (d.inUse ? 'used' : 'free') + '">' + label + ' ' + d.port + ': ' + (d.inUse ? '已占用' : '空闲') + '</span>');
+          });
+          document.getElementById('portResult').innerHTML = html.join(' &nbsp;|&nbsp; ');
+        })
+        .catch(function() {
+          document.getElementById('portResult').innerHTML = '<span class="used">检测失败</span>';
+        })
+        .finally(function() { btn.disabled = false; });
+    });
+
+    document.getElementById('configForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var apiKey = document.getElementById('apiKey').value.trim();
+      var prov = providersData[document.getElementById('provider').value] || {};
+      var needKey = prov.envKey && prov.envKey.length > 0;
+      if (!apiKey && !hasExistingKey && needKey) {
+        showMsg('请填写 API Key', true);
+        return;
+      }
+      var btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      hideMsg();
+      fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: apiKey,
+          provider: document.getElementById('provider').value || 'zai',
+          modelPrimary: document.getElementById('modelPrimary').value || 'zai/glm-5',
+          portMain: parseInt(document.getElementById('portMain').value, 10) || 18789,
+          portHexStart: parseInt(document.getElementById('portHexStart').value, 10) || 18791,
+          panelPort: parseInt(document.getElementById('panelPort').value, 10) || 3999
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          showMsg('配置已保存。阴与64卦已更新 API Key。若阴/卦正在运行，请重启后生效。', false);
+          document.getElementById('apiKey').value = '';
+          document.getElementById('apiKey').placeholder = '已配置';
+        } else {
+          showMsg(data.error || '保存失败', true);
+        }
+      })
+      .catch(function() {
+        showMsg('请求失败，请检查面板服务是否正常', true);
+      })
+      .finally(function() { btn.disabled = false; });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "panel-web",
+  "version": "1.0.0",
+  "description": "本地总控制页：主、LAN、易经64卦 状态与一键启停",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "ws": "^8.19.0"
+  }
+}
