@@ -65,7 +65,7 @@ do_start() {
   local id="$1"
   if [[ -z "$id" ]]; then
     echo "用法: $0 start <id>  其中 id = 主|1～64 (乾～未济)"
-    echo "  主 = OPENCLAW_HOME 网关(18789)；LAN 仅支持停止。"
+    echo "  主 = 阴网关(18789)；LAN 仅支持停止。"
     return 1
   fi
   if [[ "$id" == "主" || "$id" == "main" ]]; then
