@@ -217,8 +217,10 @@
       transition: box-shadow 0.2s, background 0.2s;
     }
     /* 未点击时透明，悬停略显 */
-    .taiji-dot[data-robot="main"] { left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="main"] { left: 50%; top: 32%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="yang"] { left: 50%; top: 68%; transform: translate(-50%, -50%); background: #0a0a0e; cursor: default; }
     .taiji-dot[data-robot="main"]:hover { background: rgba(140,140,140,0.45); }
+    .taiji-dot[data-robot="yang"]:hover { background: #0a0a0e; }
     .taiji-dot.running { }
     .taiji-dot[data-robot="main"].running {
       background: #f0ece8;
@@ -228,9 +230,17 @@
       background: #f0ece8;
       animation: breathe-dot-white 1.5s ease-in-out infinite;
     }
+    /* 阳：常亮假按钮，仅展示 */
+    .taiji-dot[data-robot="yang"] {
+      animation: breathe-dot-black 2s ease-in-out infinite;
+    }
     @keyframes breathe-dot-white {
       0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3); }
       50% { box-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 32px rgba(255,255,255,0.5); }
+    }
+    @keyframes breathe-dot-black {
+      0%, 100% { box-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 16px rgba(40,40,55,0.5); }
+      50% { box-shadow: 0 0 18px rgba(0,0,0,0.95), 0 0 28px rgba(50,50,70,0.6); }
     }
 
     /* 六十四卦：8 列网格，背景若隐若现呼吸的八卦 */
@@ -457,6 +467,7 @@
         <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
       </svg>
       <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
+      <button type="button" class="taiji-dot" data-robot="yang" title="阳 · 仅作展示" aria-label="阳"></button>
     </div>
   </div>
   <div class="section-hexagrams">
@@ -548,14 +559,19 @@
       const labelEl = document.getElementById('hexLabel');
       if (labelEl) labelEl.textContent = '卦象 · 已启动 ' + hexRunning;
       rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
-        const r = byId[btn.dataset.robot];
+        const rid = btn.dataset.robot;
+        if (rid === 'yang') {
+          btn.title = '阳 · 仅作展示';
+          return;
+        }
+        const r = byId[rid];
         const isRunning = !!r && !!r.running;
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击停止';
+          btn.title = '阴 · 点击停止';
         } else {
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击启动';
+          btn.title = '阴 · 点击启动';
         }
       });
       grid64.querySelectorAll('.card-hex').forEach(card => {
@@ -635,6 +651,10 @@
       rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
         const robotId = btn.dataset.robot;
         btn.addEventListener('click', async () => {
+          if (robotId === 'yang') {
+            show('仅作展示');
+            return;
+          }
           const robots = await fetchRobots();
           const robot = robots.find(r => r.id === robotId);
           const isRunning = !!(robot && robot.running);

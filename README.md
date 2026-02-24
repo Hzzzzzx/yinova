@@ -62,7 +62,28 @@ yinova/
 - **端口占用**：默认面板 3999、主网关 18789、卦 18791 起。可在配置页点击「检测端口占用」查看，并修改端口。
 - **No API key / API 调用失败**：在配置页选择提供商、填写 API Key 并保存。保存后会自动写入阴和 64 卦，重启阴/卦后即可用。无需手动编辑 auth 文件。
 - **模型列表为空**：确保 `./install.sh` 已执行完成（openclaw 需要拉取到本地）。
+- **安装失败**：确保已安装 Node.js 18+ 和 npm，检查网络连接（需要访问 GitHub 和 npm registry）。
+
+## 功能特性
+
+- 🎛️ **统一管理**：通过 Web 面板统一管理所有 openclaw 实例
+- 🚀 **一键部署**：安装脚本自动配置，无需手动设置
+- 🔧 **自动配置**：API Key 配置后自动同步到所有实例
+- 📊 **实时监控**：实时查看系统负载和卦状态
+- 🎯 **项目管理**：创建项目、选卦、分配任务
+- 🤖 **智能协调**：「阴」主网关可自主决策和协调团队
+
+## 相关链接
+
+- [openclaw](https://github.com/openclaw/openclaw) - 底层框架
+- [贡献指南](CONTRIBUTING.md) - 如何参与贡献
+- [安全策略](SECURITY.md) - 安全相关问题
+- [更新日志](CHANGELOG.md) - 版本更新记录
+
+## 贡献
+
+欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何参与。
 
 ## License
 
-MIT
+MIT License - 详见 [LICENSE](LICENSE) 文件

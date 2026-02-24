@@ -520,7 +520,7 @@
   <div class="app">
     <div class="top-strip">
       <div class="top-bar">
-        <a href="index.html" class="link-back">← 主面板</a>
+        <a href="index.html" class="link-back">← 面板首页</a>
       </div>
       <div class="row-yinyang" id="rowYinyang">
         <div class="taiji-wrap">
@@ -534,7 +534,7 @@
             <circle class="stroke" cx="50" cy="50" r="50"/>
             <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
           </svg>
-          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
+          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
           <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
         </div>
       </div>
@@ -559,7 +559,7 @@
       <div class="resizer-v" id="resizerV" title="拖动调整宽度"></div>
       <div class="page-right">
         <section class="section-yin-chat">
-          <h2>与阴对话<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
+          <h2>与阴对话（全局）<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
           <div class="yin-chat-input-row">
             <input type="text" id="yinChatInput" placeholder="输入消息与阴对话…" maxlength="2000" />
             <button type="button" class="yin-chat-send" id="yinChatSend">发送</button>
@@ -607,7 +607,7 @@
         if (r.ok) return await r.json();
       } catch (_) {}
       return [
-        { id: 'main', name: '主', gateway: 'ws://127.0.0.1:18789', running: false },
+        { id: 'main', name: '阴', gateway: 'ws://127.0.0.1:18789', running: false },
         { id: 'lan', name: 'lan', gateway: 'ws://127.0.0.1:18790', running: false },
       ];
     }
@@ -622,9 +622,9 @@
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击停止';
+          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击停止';
         } else {
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击启动';
+          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击启动';
         }
       });
     }
@@ -702,55 +702,56 @@
         var cardLeft = document.createElement('div');
         cardLeft.className = 'card-link';
         cardLeft.style.cursor = 'default';
+        var isHexDefinition = p.noDelete || p.id === 'hex-definition';
         var nameSpan = document.createElement('span');
         nameSpan.className = 'name';
         nameSpan.textContent = p.name;
-        nameSpan.title = '点击编辑名称';
+        if (!isHexDefinition) nameSpan.title = '点击编辑名称';
         var metaSpan = document.createElement('span');
         metaSpan.className = 'meta';
         metaSpan.textContent = '卦象 ' + (p.hexIds && p.hexIds.length ? p.hexIds.length + ' 个' : '未选');
-        // 点击名字跳转，双击编辑
-        nameSpan.addEventListener('click', function(e) {
-          e.stopPropagation();
-          // 切换到 input
-          var input = document.createElement('input');
-          input.type = 'text';
-          input.className = 'name-input';
-          input.value = p.name;
-          nameSpan.replaceWith(input);
-          input.focus();
-          input.select();
-          function saveRename() {
-            var newName = input.value.trim();
-            if (!newName || newName === p.name) {
-              input.replaceWith(nameSpan);
-              return;
-            }
-            fetch('/api/projects/' + encodeURIComponent(p.id), {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: newName })
-            })
-              .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-              .then(function(result) {
-                if (result.ok) {
-                  p.name = result.data.name;
-                  nameSpan.textContent = result.data.name;
-                  show('已重命名为：' + result.data.name);
-                } else {
-                  show(result.data.error || '重命名失败');
-                }
+        // 点击名字跳转；非「卦的自定义」时可点击编辑名称
+        if (!isHexDefinition) {
+          nameSpan.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'name-input';
+            input.value = p.name;
+            nameSpan.replaceWith(input);
+            input.focus();
+            input.select();
+            function saveRename() {
+              var newName = input.value.trim();
+              if (!newName || newName === p.name) {
                 input.replaceWith(nameSpan);
+                return;
+              }
+              fetch('/api/projects/' + encodeURIComponent(p.id), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newName })
               })
-              .catch(function() { show('请求失败'); input.replaceWith(nameSpan); });
-          }
-          input.addEventListener('blur', saveRename);
-          input.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { input.blur(); }
-            if (e.key === 'Escape') { input.value = p.name; input.blur(); }
+                .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                .then(function(result) {
+                  if (result.ok) {
+                    p.name = result.data.name;
+                    nameSpan.textContent = result.data.name;
+                    show('已重命名为：' + result.data.name);
+                  } else {
+                    show(result.data.error || '重命名失败');
+                  }
+                  input.replaceWith(nameSpan);
+                })
+                .catch(function() { show('请求失败'); input.replaceWith(nameSpan); });
+            }
+            input.addEventListener('blur', saveRename);
+            input.addEventListener('keydown', function(e) {
+              if (e.key === 'Enter') { input.blur(); }
+              if (e.key === 'Escape') { input.value = p.name; input.blur(); }
+            });
           });
-        });
-        // 点击卡片其他区域跳转
+        }
         cardLeft.addEventListener('click', function(e) {
           if (e.target === nameSpan || e.target.classList.contains('name-input')) return;
           window.location.href = 'project.html?id=' + encodeURIComponent(p.id);
@@ -761,31 +762,32 @@
 
         var actions = document.createElement('div');
         actions.className = 'card-actions';
-        var btnDelete = document.createElement('button');
-        btnDelete.type = 'button';
-        btnDelete.className = 'btn-card-action btn-delete';
-        btnDelete.textContent = '删除';
-        actions.appendChild(btnDelete);
+        if (!isHexDefinition) {
+          var btnDelete = document.createElement('button');
+          btnDelete.type = 'button';
+          btnDelete.className = 'btn-card-action btn-delete';
+          btnDelete.textContent = '删除';
+          actions.appendChild(btnDelete);
+          btnDelete.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!confirm('确定删除项目「' + p.name + '」？')) return;
+            fetch('/api/projects/' + encodeURIComponent(p.id), { method: 'DELETE' })
+              .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+              .then(function(result) {
+                if (result.ok) {
+                  show('已删除');
+                  loadProjects();
+                } else {
+                  show(result.data.error || '删除失败');
+                }
+              })
+              .catch(function() { show('请求失败'); });
+          });
+        }
         card.appendChild(actions);
         li.appendChild(card);
         listEl.appendChild(li);
-
-        btnDelete.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!confirm('确定删除项目「' + p.name + '」？')) return;
-          fetch('/api/projects/' + encodeURIComponent(p.id), { method: 'DELETE' })
-            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-            .then(function(result) {
-              if (result.ok) {
-                show('已删除');
-                loadProjects();
-              } else {
-                show(result.data.error || '删除失败');
-              }
-            })
-            .catch(function() { show('请求失败'); });
-        });
       });
     }
 
@@ -903,6 +905,31 @@
       }
     }
     if (yinChatSend && yinChatInput) {
+      var YIN_TASK_KEY_GLOBAL = 'yinChatTask_global';
+      var _yinPollTimer = null;
+      function pollYinTask(taskId) {
+        fetch('/api/yin/task/' + encodeURIComponent(taskId))
+          .then(function(r) { return r.json(); })
+          .then(function(task) {
+            if (task.status === 'done') {
+              try { sessionStorage.removeItem(YIN_TASK_KEY_GLOBAL); } catch (e) {}
+              if (task.reply) appendYinChatMsg('yin', task.reply);
+              yinChatSend.disabled = false;
+              saveYinChatHistory();
+              return;
+            }
+            if (task.status === 'error') {
+              try { sessionStorage.removeItem(YIN_TASK_KEY_GLOBAL); } catch (e) {}
+              appendYinChatMsg('yin', '（' + (task.error || '暂时无法收到阴的回复') + '）');
+              yinChatSend.disabled = false;
+              return;
+            }
+            _yinPollTimer = setTimeout(function() { pollYinTask(taskId); }, 1500);
+          })
+          .catch(function() {
+            _yinPollTimer = setTimeout(function() { pollYinTask(taskId); }, 2000);
+          });
+      }
       yinChatSend.addEventListener('click', function() {
         var text = (yinChatInput.value || '').trim();
         if (!text) return;
@@ -914,22 +941,33 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text, projectId: YIN_SERVER_PROJECT_ID, history: getYinHistoryForAPI() })
         })
-          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
-          .then(function(result) {
-            var reply = (result.data && result.data.reply != null) ? result.data.reply : null;
-            if (reply) {
-              appendYinChatMsg('yin', reply);
-            } else if (result.status === 501 || (result.data && result.data.error && (result.data.error + '').indexOf('未配置') !== -1)) {
-              appendYinChatMsg('yin', '（阴对话接口未配置。请在面板服务端设置 YIN_CHAT_URL 后重试。）');
-            } else {
-              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + (result.data && result.data.error ? result.data.error : '请求失败') + '）');
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var taskId = data && data.taskId;
+            if (!taskId) {
+              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + (data && data.error ? data.error : '未返回 taskId') + '）');
+              yinChatSend.disabled = false;
+              return;
             }
+            try { sessionStorage.setItem(YIN_TASK_KEY_GLOBAL, taskId); } catch (e) {}
+            pollYinTask(taskId);
           })
           .catch(function() {
             appendYinChatMsg('yin', '（请求失败）');
-          })
-          .then(function() { yinChatSend.disabled = false; });
+            yinChatSend.disabled = false;
+          });
       });
+      window.addEventListener('beforeunload', function() {
+        if (_yinPollTimer) clearTimeout(_yinPollTimer);
+      });
+      (function() {
+        try {
+          var savedTaskId = sessionStorage.getItem(YIN_TASK_KEY_GLOBAL);
+          if (!savedTaskId) return;
+          yinChatSend.disabled = true;
+          pollYinTask(savedTaskId);
+        } catch (e) {}
+      })();
       yinChatInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') yinChatSend.click();
       });

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Yinova 面板：阴（主网关）+ 易经 64 卦控制
- * - 主：点启动 → 弹终端运行 启动阴.sh（网关 + TUI）。
+ * Yinova 面板：阴（平台总控网关）+ 易经 64 卦控制
+ * - 阴：点启动 → 弹终端运行 启动阴.sh（网关 + TUI）。
  * - 乾～未济：点启动 → 若对应端口未占用会先自动起网关，再弹终端开 TUI（一键启动）。
  */
 const express = require('express');
@@ -225,7 +225,7 @@ function startGatewayInBackground(worker) {
   child.unref();
 }
 
-// 后台启动主（阴）gateway：端口 18789，使用项目内 openclaw
+// 后台启动阴 gateway：端口 18789，使用项目内 openclaw
 const MAIN_GATEWAY_PORT = parseInt((GATEWAY_MAIN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18789;
 const MAIN_GATEWAY_LOG = path.join(os.tmpdir(), 'yinova-main.log');
 function startMainGatewayInBackground() {
@@ -289,7 +289,7 @@ function getRobotsList() {
   const inUse = getPortsInUse();
   const mainPort = parseInt((GATEWAY_MAIN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18789;
   const list = [
-    { id: 'main', name: '主', desc: 'Yinova 阴', gateway: GATEWAY_MAIN, running: inUse.has(mainPort) },
+    { id: 'main', name: '阴', desc: '阴 · 平台总控', gateway: GATEWAY_MAIN, running: inUse.has(mainPort) },
   ];
   HEXAGRAM_ROBOTS.forEach((h) => {
     const w = getWorkerByHex(h.id);
@@ -526,6 +526,8 @@ app.post('/api/config', (req, res) => {
 // 项目空间：本地 JSON 存储（路线图阶段 A）
 const DATA_DIR = path.join(__dirname, 'data');
 const PROJECTS_FILE = path.join(DATA_DIR, 'projects.json');
+const HEX_DEFINITION_PROJECT_ID = 'hex-definition';
+const HEX_DEFINITION_FILE = path.join(DATA_DIR, 'hex-definition.json');
 function ensureDataDir() {
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (_) {}
 }
@@ -543,6 +545,19 @@ function writeProjects(list) {
   ensureDataDir();
   fs.writeFileSync(PROJECTS_FILE, JSON.stringify(list, null, 2), 'utf8');
 }
+function readHexDefinitionConfig() {
+  try {
+    if (fs.existsSync(HEX_DEFINITION_FILE)) {
+      const j = JSON.parse(fs.readFileSync(HEX_DEFINITION_FILE, 'utf8'));
+      return { hexIds: Array.isArray(j.hexIds) ? j.hexIds : [] };
+    }
+  } catch (_) {}
+  return { hexIds: [] };
+}
+function writeHexDefinitionConfig(obj) {
+  ensureDataDir();
+  fs.writeFileSync(HEX_DEFINITION_FILE, JSON.stringify({ hexIds: obj.hexIds || [] }, null, 2), 'utf8');
+}
 function nextProjectId(list) {
   const max = list.reduce((m, p) => Math.max(m, parseInt(String(p.id).replace(/\D/g, '') || '0', 10)), 0);
   return 'p' + (max + 1);
@@ -550,7 +565,15 @@ function nextProjectId(list) {
 
 app.get('/api/projects', (_req, res) => {
   try {
-    res.json(readProjects());
+    const list = readProjects().filter((p) => p.id !== HEX_DEFINITION_PROJECT_ID);
+    const hexDef = readHexDefinitionConfig();
+    const virtual = {
+      id: HEX_DEFINITION_PROJECT_ID,
+      name: '卦的自定义',
+      hexIds: hexDef.hexIds,
+      noDelete: true
+    };
+    res.json([virtual, ...list]);
   } catch (err) {
     res.status(500).json({ error: err.message || '读取项目列表失败' });
   }
@@ -575,6 +598,15 @@ app.post('/api/projects', (req, res) => {
 });
 app.get('/api/projects/:id', (req, res) => {
   try {
+    if (req.params.id === HEX_DEFINITION_PROJECT_ID) {
+      const hexDef = readHexDefinitionConfig();
+      return res.json({
+        id: HEX_DEFINITION_PROJECT_ID,
+        name: '卦的自定义',
+        hexIds: hexDef.hexIds,
+        noDelete: true
+      });
+    }
     const list = readProjects();
     const project = list.find(p => p.id === req.params.id);
     if (!project) return res.status(404).json({ error: '项目不存在' });
@@ -585,6 +617,14 @@ app.get('/api/projects/:id', (req, res) => {
 });
 app.put('/api/projects/:id', (req, res) => {
   try {
+    if (req.params.id === HEX_DEFINITION_PROJECT_ID) {
+      const body = req.body || {};
+      if (!Array.isArray(body.hexIds)) return res.status(400).json({ error: '仅允许更新 hexIds' });
+      const hexDef = readHexDefinitionConfig();
+      hexDef.hexIds = body.hexIds;
+      writeHexDefinitionConfig(hexDef);
+      return res.json({ id: HEX_DEFINITION_PROJECT_ID, name: '卦的自定义', hexIds: hexDef.hexIds, noDelete: true });
+    }
     const list = readProjects();
     const idx = list.findIndex(p => p.id === req.params.id);
     if (idx < 0) return res.status(404).json({ error: '项目不存在' });
@@ -658,6 +698,7 @@ app.put('/api/projects/:id/tasks/:taskId', (req, res) => {
 });
 app.delete('/api/projects/:id', (req, res) => {
   try {
+    if (req.params.id === HEX_DEFINITION_PROJECT_ID) return res.status(403).json({ error: '卦的自定义不可删除' });
     let list = readProjects();
     const len = list.length;
     list = list.filter(p => p.id !== req.params.id);
@@ -666,6 +707,28 @@ app.delete('/api/projects/:id', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message || '删除项目失败' });
+  }
+});
+
+app.post('/api/hex-definition/:hexId', (req, res) => {
+  try {
+    const hexId = req.params.hexId;
+    if (!HEXAGRAM_ROBOTS.some((h) => h.id === hexId)) return res.status(404).json({ error: '卦不存在' });
+    const worker = getWorkerByHex(hexId);
+    if (!worker || !worker.stateDir) return res.status(404).json({ error: '该卦未配置 stateDir' });
+    const content = (req.body && req.body.content != null) ? String(req.body.content) : '';
+    const workspaceDir = path.join(worker.stateDir, 'workspace');
+    const filePath = path.join(workspaceDir, '我的定义.md');
+    if (!path.resolve(filePath).startsWith(path.resolve(worker.stateDir))) return res.status(400).json({ error: '路径非法' });
+    try {
+      if (!fs.existsSync(workspaceDir)) fs.mkdirSync(workspaceDir, { recursive: true });
+      fs.writeFileSync(filePath, content, 'utf8');
+    } catch (e) {
+      return res.status(500).json({ error: '写入失败: ' + e.message });
+    }
+    res.json({ ok: true, path: filePath });
+  } catch (err) {
+    res.status(500).json({ error: err.message || '写入卦定义失败' });
   }
 });
 
@@ -1522,7 +1585,7 @@ app.post('/api/reports/generate', (req, res) => {
 });
 // ---------- 阴升级 Phase 4 结束 ----------
 
-// 与阴对话：走主网关 18789（与终端 moltbot TUI 同一 Claw），不再用 Bala。网关需启用 HTTP chatCompletions。
+// 与阴对话：走阴网关 18789（与终端 moltbot TUI 同一 Claw），不再用 Bala。网关需启用 HTTP chatCompletions。
 const MAIN_GATEWAY_HTTP = `http://127.0.0.1:${MAIN_GATEWAY_PORT}`;
 function getMainGatewayToken() {
   const envToken = process.env.YINOVA_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || '';
@@ -1564,15 +1627,18 @@ function queuedWriteFile(filePath, data) {
   return next;
 }
 
-// GET /api/chat-history/:projectId/:mode — 读取聊天记录
+// GET /api/chat-history/:projectId/:mode — 读取聊天记录（projectId 不能为空，避免落成 default 串项目）
 app.get('/api/chat-history/:projectId/:mode', (req, res) => {
-  const { projectId, mode } = req.params;
+  const projectId = String(req.params.projectId || '').trim();
+  const mode = req.params.mode;
+  if (!projectId) return res.status(400).json({ error: 'projectId 不能为空' });
   if (!['discuss', 'single', 'yin'].includes(mode)) return res.status(400).json({ error: '无效的 mode' });
   const filePath = getChatHistoryPath(projectId, mode);
   try {
     if (!fs.existsSync(filePath)) return res.json({ messages: [] });
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    res.json({ messages: Array.isArray(data) ? data : [] });
+    const list = Array.isArray(data) ? data : (data && Array.isArray(data.messages) ? data.messages : []);
+    res.json({ messages: list });
   } catch (e) {
     res.json({ messages: [] });
   }
@@ -1580,7 +1646,9 @@ app.get('/api/chat-history/:projectId/:mode', (req, res) => {
 
 // POST /api/chat-history/:projectId/:mode — 保存聊天记录（队列写入，防并发覆盖）
 app.post('/api/chat-history/:projectId/:mode', (req, res) => {
-  const { projectId, mode } = req.params;
+  const projectId = String(req.params.projectId || '').trim();
+  const mode = req.params.mode;
+  if (!projectId) return res.status(400).json({ error: 'projectId 不能为空' });
   if (!['discuss', 'single', 'yin'].includes(mode)) return res.status(400).json({ error: '无效的 mode' });
   const { messages } = req.body || {};
   if (!Array.isArray(messages)) return res.status(400).json({ error: 'messages 必须是数组' });
@@ -1645,7 +1713,9 @@ app.delete('/api/project-memory/:id', (req, res) => {
 
 // DELETE /api/chat-history/:projectId/:mode — 清空聊天记录
 app.delete('/api/chat-history/:projectId/:mode', (req, res) => {
-  const { projectId, mode } = req.params;
+  const projectId = String(req.params.projectId || '').trim();
+  const mode = req.params.mode;
+  if (!projectId) return res.status(400).json({ error: 'projectId 不能为空' });
   if (!['discuss', 'single', 'yin', 'all'].includes(mode)) return res.status(400).json({ error: '无效的 mode' });
   try {
     if (mode === 'all') {
@@ -1666,106 +1736,117 @@ app.delete('/api/chat-history/:projectId/:mode', (req, res) => {
 app.get('/api/yin/status', (_req, res) => {
   res.json({ configured: true, source: 'gateway', port: MAIN_GATEWAY_PORT });
 });
-app.post('/api/yin/chat', async (req, res) => {
-  const { message, projectId, history } = req.body || {};
-  const text = (message != null ? String(message) : '').trim();
-  if (!text) return res.json({ reply: '' });
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getMainGatewayToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  try {
-    // 构建消息，包含项目上下文
-    const messages = [];
-    if (projectId) {
-      // 如果有projectId，先获取项目信息
-      try {
-        const projectList = readProjects();
-        const project = projectList.find(p => p.id === projectId);
-        if (project) {
-          // 添加项目上下文作为system message
-          const hexNames = project.hexIds && project.hexIds.length > 0 
-            ? project.hexIds.map(id => {
-                const hex = HEXAGRAM_ROBOTS.find(h => h.id === id);
-                return hex ? hex.name : id;
-              }).join('、')
-            : '无';
-          messages.push({
-            role: 'system',
-            content: `当前项目上下文：
+
+// 与阴对话改为「先返回 taskId + 后台请求」，换页不中断，前端轮询取结果
+const yinTaskStore = new Map();
+app.get('/api/yin/task/:taskId', (req, res) => {
+  const task = yinTaskStore.get(req.params.taskId);
+  if (!task) return res.status(404).json({ error: 'task not found' });
+  res.json(task);
+});
+
+function buildYinMessages(projectId, history, text) {
+  const messages = [];
+  if (projectId) {
+    try {
+      const projectList = readProjects();
+      const project = projectList.find(p => p.id === projectId);
+      if (project) {
+        const hexNames = project.hexIds && project.hexIds.length > 0
+          ? project.hexIds.map(id => {
+              const hex = HEXAGRAM_ROBOTS.find(h => h.id === id);
+              return hex ? hex.name : id;
+            }).join('、')
+          : '无';
+        let systemContent = `当前项目上下文：
 - 项目ID: ${project.id}
 - 项目名称: ${project.name}
 - 已选卦: ${hexNames}
 
-重要：用户正在项目"${project.name}"中与你对话。如果用户要求选卦、启动卦等操作，应该在这个项目中操作，而不是新建项目。只有在用户明确要求新建项目时，才创建新项目。`
-          });
+重要：用户正在项目"${project.name}"中与你对话。如果用户要求选卦、启动卦等操作，应该在这个项目中操作，而不是新建项目。只有在用户明确要求新建项目时，才创建新项目。`;
+        const mem = readProjectMemory(projectId);
+        if (Array.isArray(mem.entries) && mem.entries.length > 0) {
+          const recent = mem.entries.slice(-20);
+          const memLines = recent.map(e => `- ${e.date} [${e.type || '备注'}] ${String(e.content || '').slice(0, 200)}`).filter(Boolean);
+          if (memLines.length > 0) systemContent += `\n\n项目记忆（最近${memLines.length}条）：\n` + memLines.join('\n');
         }
-      } catch (e) {
-        // 如果获取项目信息失败，继续执行
-        console.warn('[yin/chat] 获取项目信息失败:', e.message);
+        messages.push({ role: 'system', content: systemContent });
       }
-    }
-    // 阶段2.3：把传入的历史记录拼进 messages，让阴有真实记忆
-    // history 格式：[{ role: 'user'|'yin', text: string }]
-    // 超过25条时压缩旧对话为摘要，保留最近10条原始消息
-    if (Array.isArray(history) && history.length > 0) {
-      const YIN_COMPRESS = 25, YIN_KEEP = 10;
-      if (history.length > YIN_COMPRESS) {
-        const oldPart = history.slice(0, history.length - YIN_KEEP);
-        const recentPart = history.slice(-YIN_KEEP);
-        const summaryLines = oldPart.map((h) => {
-          const role = h.role === 'yin' ? '阴' : '用户';
-          const content = String(h.text || h.message || '').slice(0, 120);
-          return content ? `${role}: ${content}` : null;
-        }).filter(Boolean);
-        if (summaryLines.length > 0) {
-          messages.push({
-            role: 'system',
-            content: `【历史对话摘要（共${oldPart.length}条，已压缩）】\n${summaryLines.join('\n')}\n\n以下是最近的对话：`
-          });
-        }
-        for (const h of recentPart) {
-          const role = h.role === 'yin' ? 'assistant' : 'user';
-          const content = String(h.text || h.message || '');
-          if (content) messages.push({ role, content });
-        }
-      } else {
-        const recentHistory = history.slice(-15);
-        for (const h of recentHistory) {
-          const role = h.role === 'yin' ? 'assistant' : 'user';
-          const content = String(h.text || h.message || '');
-          if (content) messages.push({ role, content });
-        }
-      }
-    }
-    messages.push({ role: 'user', content: text });
-    
-    const response = await fetch(`${MAIN_GATEWAY_HTTP}/v1/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model: 'openclaw',
-        messages: messages,
-      }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const errMsg = data.error?.message || data.message || `HTTP ${response.status}`;
-      if (response.status === 404 || response.status === 405) {
-        return res.status(502).json({ error: '主网关未开启或不允许 HTTP Chat 接口。请在阴的配置（阴/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启主网关。', reply: null });
-      }
-      if (response.status === 401) {
-        return res.status(502).json({ error: '主网关鉴权失败(Unauthorized)。面板会从 阴/moltbot.json 的 gateway.auth.token 自动读取 token；若仍报错请设置环境变量 YINOVA_GATEWAY_TOKEN 后重启面板。', reply: null });
-      }
-      return res.status(502).json({ error: errMsg, reply: null });
-    }
-    const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? String(data.choices[0].message.content) : '';
-    return res.json({ reply });
-  } catch (err) {
-    const detail = err.cause ? (err.cause.message || String(err.cause)) : '';
-    const msg = detail ? `${err.message} (${detail})` : (err.message || '主网关不可达');
-    console.error('[yin/chat] 请求主网关失败:', err.message, detail || '');
-    return res.status(502).json({ error: msg + '。请先启动主网关（点阴·启动），或查看运行面板的终端里的报错。', reply: null });
+    } catch (e) { console.warn('[yin/chat] 获取项目信息失败:', e.message); }
   }
+  if (Array.isArray(history) && history.length > 0) {
+    const YIN_COMPRESS = 25, YIN_KEEP = 10;
+    if (history.length > YIN_COMPRESS) {
+      const oldPart = history.slice(0, history.length - YIN_KEEP);
+      const recentPart = history.slice(-YIN_KEEP);
+      const summaryLines = oldPart.map((h) => {
+        const role = h.role === 'yin' ? '阴' : '用户';
+        const content = String(h.text || h.message || '').slice(0, 120);
+        return content ? `${role}: ${content}` : null;
+      }).filter(Boolean);
+      if (summaryLines.length > 0) {
+        messages.push({ role: 'system', content: `【历史对话摘要（共${oldPart.length}条，已压缩）】\n${summaryLines.join('\n')}\n\n以下是最近的对话：` });
+      }
+      for (const h of recentPart) {
+        const role = h.role === 'yin' ? 'assistant' : 'user';
+        const content = String(h.text || h.message || '');
+        if (content) messages.push({ role, content });
+      }
+    } else {
+      const recentHistory = history.slice(-15);
+      for (const h of recentHistory) {
+        const role = h.role === 'yin' ? 'assistant' : 'user';
+        const content = String(h.text || h.message || '');
+        if (content) messages.push({ role, content });
+      }
+    }
+  }
+  messages.push({ role: 'user', content: text });
+  return messages;
+}
+
+app.post('/api/yin/chat', (req, res) => {
+  const { message, projectId, history } = req.body || {};
+  const text = (message != null ? String(message) : '').trim();
+  if (!text) return res.json({ taskId: null, reply: '', error: null });
+  const taskId = `yintask_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const task = { status: 'running', reply: null, error: null, createdAt: Date.now() };
+  yinTaskStore.set(taskId, task);
+  res.json({ taskId });
+  (async () => {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getMainGatewayToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const messages = buildYinMessages(projectId, history || [], text);
+      const response = await fetch(`${MAIN_GATEWAY_HTTP}/v1/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model: 'openclaw', messages }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const errMsg = data.error?.message || data.message || `HTTP ${response.status}`;
+        if (response.status === 404 || response.status === 405) {
+          task.error = '阴网关未开启或不允许 HTTP Chat 接口。请在阴的配置（阴/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启阴网关。';
+        } else if (response.status === 401) {
+          task.error = '阴网关鉴权失败(Unauthorized)。请检查 阴/moltbot.json 或环境变量 YINOVA_GATEWAY_TOKEN。';
+        } else {
+          task.error = errMsg;
+        }
+        task.status = 'error';
+      } else {
+        task.reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) ? String(data.choices[0].message.content) : '';
+        task.status = 'done';
+      }
+    } catch (err) {
+      const detail = err.cause ? (err.cause.message || String(err.cause)) : '';
+      task.error = (detail ? `${err.message} (${detail})` : (err.message || '阴网关不可达')) + '。请先启动阴网关（点阴·启动），或查看运行面板的终端里的报错。';
+      task.status = 'error';
+      console.error('[yin/chat] 请求阴网关失败:', err.message, detail || '');
+    }
+    setTimeout(() => { yinTaskStore.delete(taskId); }, 300000);
+  })();
 });
 
 // 解析消息中的 @卦名，返回被 @ 的卦的 id 列表（去重）；若无 @ 则返回空数组（表示不限制，用项目已选卦）
@@ -1778,7 +1859,7 @@ function parseMentionedHexIds(message) {
   return [...new Set(mentioned)];
 }
 
-// 与卦对话（E）：向本项目所选卦发消息，各卦网关需启用 chatCompletions（同主网关）
+// 与卦对话（E）：向本项目所选卦发消息，各卦网关需启用 chatCompletions（同阴网关）
 // 支持 @ 触发：消息中含 @坤、@随 @否 等时，只向被 @ 且在本项目中的卦发请求；不含 @ 则群发
 // 超时控制：给单个卦的 fetch 加 AbortSignal，防止卦进程卡住导致整个请求挂死
 const HEX_FETCH_TIMEOUT_MS = 120000; // 120s
@@ -1859,26 +1940,38 @@ app.post('/api/hex/chat', (req, res) => {
   let projectSystemMsg = null;
   if (reqProjectId) {
     try {
-      const projectList = readProjects();
-      const proj = projectList.find((p) => p.id === reqProjectId);
-      if (proj) {
-        const hexNames = (proj.hexIds || []).map((id) => {
+      if (reqProjectId === HEX_DEFINITION_PROJECT_ID) {
+        const hexDef = readHexDefinitionConfig();
+        const hexNames = (hexDef.hexIds || []).map((id) => {
           const h = HEXAGRAM_ROBOTS.find((r) => r.id === id);
           return h ? h.name : id;
         }).join('、');
-        // 读取项目记忆，最多注入最近20条
-        let memoryText = '';
-        try {
-          const mem = readProjectMemory(reqProjectId);
-          if (mem.entries && mem.entries.length > 0) {
-            const recent = mem.entries.slice(-20);
-            memoryText = '\n\n项目记忆（按时间）：\n' + recent.map(e => `- ${e.date} [${e.type}] ${e.content}`).join('\n');
-          }
-        } catch (e) { /* 记忆读取失败不影响主流程 */ }
         projectSystemMsg = {
           role: 'system',
-          content: `当前项目上下文：项目名称"${proj.name}"，参与卦：${hexNames || '无'}。你是该项目的参与者，请围绕项目背景作答。${memoryText}`
+          content: `当前是「卦的自定义」场景，参与卦：${hexNames || '无'}。你可通过写入 workspace/我的定义.md 来更新自己的人设（角色、擅长、边界等）。与用户或其它卦讨论后，若达成共识即可写入该文件。`
         };
+      } else {
+        const projectList = readProjects();
+        const proj = projectList.find((p) => p.id === reqProjectId);
+        if (proj) {
+          const hexNames = (proj.hexIds || []).map((id) => {
+            const h = HEXAGRAM_ROBOTS.find((r) => r.id === id);
+            return h ? h.name : id;
+          }).join('、');
+          // 读取项目记忆，最多注入最近20条
+          let memoryText = '';
+          try {
+            const mem = readProjectMemory(reqProjectId);
+            if (mem.entries && mem.entries.length > 0) {
+              const recent = mem.entries.slice(-20);
+              memoryText = '\n\n项目记忆（按时间）：\n' + recent.map(e => `- ${e.date} [${e.type}] ${e.content}`).join('\n') + '\n\n此处为面板对话，项目记忆优先于你本地工作区记忆，若有冲突以项目记忆为准。';
+            }
+          } catch (e) { /* 记忆读取失败不影响主流程 */ }
+          projectSystemMsg = {
+            role: 'system',
+            content: `当前项目上下文：项目名称"${proj.name}"，参与卦：${hexNames || '无'}。你是该项目的参与者，请围绕项目背景作答。${memoryText}`
+          };
+        }
       }
     } catch (e) { /* 获取项目信息失败时忽略，不影响主流程 */ }
   }
@@ -1946,7 +2039,7 @@ app.post('/api/hex/chat', (req, res) => {
   
   // 第一轮：向所有卦并行发送用户消息（并行可显著缩短总耗时）
   // 群发单聊：只传用户消息作为历史，卦看不到任何卦的回复（包括上一轮）
-  const firstRoundHistory = broadcast ? hist : hist.filter((h) => (h.type || 'user') === 'user');
+  const firstRoundHistory = broadcast ? hist : hist.filter((h) => String(h && h.type) === 'user');
   const baseMessages = buildMessages(firstRoundHistory);
   baseMessages.push({ role: 'user', content: text });
   
@@ -2742,7 +2835,7 @@ app.post('/api/close-all-hex-terminals', async (req, res) => {
   }
 });
 
-// 精准停止：主 / 指定卦（关网关进程 + 若有则关对应终端窗口）
+// 精准停止：阴 / 指定卦（关网关进程 + 若有则关对应终端窗口）
 const PORT_MAIN = 18789;
 app.post('/api/stop/:robot', async (req, res) => {
   try {

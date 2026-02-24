@@ -51,7 +51,7 @@ Get all robot status (main/lan/64 hexagrams):
 Response format:
 ```json
 [
-  {"id": "main", "name": "主", "running": false},
+  {"id": "main", "name": "阴", "running": false},
   {"id": "qian", "name": "乾", "port": 18791, "running": true},
   ...
 ]
@@ -97,6 +97,19 @@ Content-Type: application/json
 ```
 使用web.fetch工具调用 DELETE http://localhost:3999/api/projects/<project_id>
 ```
+注：id 为 `hex-definition` 的「卦的自定义」项目不可删除。
+
+### Write Hex Definition (卦的自定义)
+
+为指定卦写入其人设定义（写入该卦 workspace 下的 `我的定义.md`）。可用于在「卦的自定义」场景下由阴替卦更新定义。
+
+**使用web.fetch工具：**
+```
+使用web.fetch工具调用 POST http://localhost:3999/api/hex-definition/<hex_id>
+请求体: {"content": "卦的我的定义.md 的完整内容（Markdown）"}
+Content-Type: application/json
+```
+示例：`POST http://localhost:3999/api/hex-definition/qian` 会写入乾的 `workspace/我的定义.md`。
 
 ## Robot Control
 

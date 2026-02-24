@@ -299,6 +299,9 @@
       cursor: pointer;
     }
     .modal-btn-done:hover { background: rgba(201, 162, 39, 0.12); }
+    .modal-clear-confirm .modal-clear-message { margin: 0 0 12px; color: var(--text); }
+    .modal-clear-confirm .modal-clear-checkbox { display: block; margin-bottom: 12px; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; }
+    .modal-clear-confirm .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
     .toast {
       position: fixed;
       bottom: 28px;
@@ -660,6 +663,11 @@
       justify-content: space-between;
       padding-right: 32px;
     }
+    .yin-chat-hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin: -6px 0 8px 0;
+    }
     .yin-chat-clear-btn {
       font-size: 0.78rem;
       color: var(--text-dim);
@@ -965,7 +973,7 @@
             <circle class="stroke" cx="50" cy="50" r="50"/>
             <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
           </svg>
-          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
+          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
           <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
         </div>
         <div id="ringHexes"></div>
@@ -983,6 +991,17 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="modal-btn-done" id="modalBtnDone">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modalClearConfirm" aria-hidden="true">
+      <div class="modal-select-hex modal-clear-confirm">
+        <p class="modal-clear-message" id="modalClearMessage"></p>
+        <label class="modal-clear-checkbox"><input type="checkbox" id="modalClearMemory" /> 同时清空本项目记忆</label>
+        <div class="modal-footer">
+          <button type="button" class="modal-btn-done" id="modalClearCancel">取消</button>
+          <button type="button" class="modal-btn-done" id="modalClearOk">确定</button>
         </div>
       </div>
     </div>
@@ -1071,6 +1090,7 @@
       <div class="chat-resizer" id="chatResizer"></div>
       <section class="section-yin-chat" id="panelYinChat">
         <h2>与阴对话<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
+        <p class="yin-chat-hint">此处对话仅属于当前项目</p>
         <div class="yin-chat-row">
           <input type="text" id="yinChatInput" placeholder="输入消息，与阴总控对话…" maxlength="2000" />
           <button type="button" class="yin-chat-send" id="yinChatSend">发送</button>
@@ -1309,7 +1329,8 @@
     if (hexChatFileWarn && isFileProtocol) hexChatFileWarn.style.display = 'block';
     function setHexChatFormEnabled(enabled) {
       var on = enabled && !isFileProtocol;
-      if (hexChatSend) hexChatSend.disabled = !on;
+      var hexPending = (typeof _activeTaskId !== 'undefined' && _activeTaskId != null) || (typeof _activeAgentTasks !== 'undefined' && _activeAgentTasks && _activeAgentTasks.size > 0) || (typeof _hexChatRestoring !== 'undefined' && _hexChatRestoring);
+      if (hexChatSend) hexChatSend.disabled = !on || !!hexPending;
       if (hexChatInput) { hexChatInput.disabled = !on; hexChatInput.placeholder = on ? '输入消息，向本项目各卦发送…' : '请用 http://localhost:3999/project.html 打开页面后再发消息'; }
     }
 
@@ -1814,8 +1835,10 @@
         }
         if (messages.length > 0) {
           var filtered = messages.filter(function(msg) {
-            if (msg.type !== 'user' && msg.type !== 'hex') return false;
-            if (currentMode === 'single') return msg.type === 'user';
+            var t = msg && msg.type;
+            if (t !== 'user' && t !== 'hex') return false;
+            // 群发单聊：只传用户消息，卦不能看到其他卦的回复
+            if (currentMode === 'single') return t === 'user';
             return true;
           });
           return filtered.map(function(msg) {
@@ -1973,68 +1996,87 @@
         .catch(function() { showSummaryError('摘要获取失败，网络错误'); });
     }
 
-    // P4: 触发阴决策（自动 + 手动重试均走此函数）
+    // P4: 触发阴决策（自动 + 手动重试均走此函数）；与阴对话已改为 taskId+轮询，此处同步改为轮询取回复
     function triggerYinDecision(summaryText, summaryDiv) {
       var yinBtn = summaryDiv && summaryDiv.querySelector('.hex-chat-ask-yin-btn');
       if (yinBtn) { yinBtn.disabled = true; yinBtn.textContent = '阴正在决策…'; }
-      // 移除上一次的决策卡片（重试时刷新）
       if (summaryDiv) {
         var oldDecision = summaryDiv.querySelector('.hex-chat-yin-decision');
         if (oldDecision) oldDecision.remove();
       }
-
-      // 阶段2.4：使用服务器文件存储的阴的历史（通过内存缓存获取）
       var yinHistory = getYinChatHistoryForAPI();
-
-      // P6: 结构化决策输出 prompt
       var yinPrompt = '以下是项目卦群的讨论摘要：\n\n' + summaryText + '\n\n请你作为项目管理者，严格按以下格式给出决策（每个标签必须有内容）：\n\n决策：执行 / 暂缓 / 放弃（三选一）\n置信度：高 / 中 / 低（三选一）\n理由：（1-3句话，简洁有力）\n行动项：（谁负责什么，格式：- 负责人：任务内容）\n\n要求：严格按格式，不要多余内容，不超过200字。';
 
-      // 使用 /api/yin/chat 接口（带入阴的历史记忆）
+      function renderDecisionResult(reply, errMsg) {
+        if (!summaryDiv) return;
+        var decisionDiv = document.createElement('div');
+        decisionDiv.className = 'hex-chat-yin-decision';
+        if (reply) {
+          decisionDiv.setAttribute('data-decision', reply);
+          var parsed = parseYinDecision(reply);
+          decisionDiv.innerHTML = renderYinDecision(parsed, reply);
+          var copyBtn = decisionDiv.querySelector('.hex-chat-decision-copy');
+          if (copyBtn) {
+            copyBtn.addEventListener('click', function() {
+              navigator.clipboard && navigator.clipboard.writeText(reply).then(function() {
+                copyBtn.textContent = '已复制✓'; setTimeout(function() { copyBtn.textContent = '复制决策'; }, 2000);
+              });
+            });
+          }
+          saveHexChatHistory();
+        } else if (errMsg && errMsg.indexOf('未配置') !== -1) {
+          decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴对话未配置，无法获取决策</div>';
+        } else {
+          decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴的决策获取失败 <button type="button" class="hex-chat-ask-yin-btn">重试</button></div>';
+          var retryBtn = decisionDiv.querySelector('.hex-chat-ask-yin-btn');
+          if (retryBtn) retryBtn.addEventListener('click', function() { triggerYinDecision(summaryText, summaryDiv); });
+        }
+        summaryDiv.appendChild(decisionDiv);
+        if (hexChatMessages) hexChatMessages.scrollTop = hexChatMessages.scrollHeight;
+        var btnAfter = summaryDiv && summaryDiv.querySelector('.hex-chat-ask-yin-btn');
+        if (btnAfter) { btnAfter.disabled = false; btnAfter.textContent = '@阴 请求决策'; }
+      }
+
       fetch('/api/yin/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: yinPrompt, projectId: projectId, history: yinHistory })
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        var reply = data.reply;
-        if (summaryDiv) {
-          var decisionDiv = document.createElement('div');
-          decisionDiv.className = 'hex-chat-yin-decision';
-          if (reply) {
-            decisionDiv.setAttribute('data-decision', reply);
-            var parsed = parseYinDecision(reply);
-            decisionDiv.innerHTML = renderYinDecision(parsed, reply);
-            var copyBtn = decisionDiv.querySelector('.hex-chat-decision-copy');
-            if (copyBtn) {
-              copyBtn.addEventListener('click', function() {
-                navigator.clipboard && navigator.clipboard.writeText(reply).then(function() {
-                  copyBtn.textContent = '已复制✓'; setTimeout(function() { copyBtn.textContent = '复制决策'; }, 2000);
-                });
-              });
-            }
-          } else if (data.error && data.error.indexOf('未配置') !== -1) {
-            decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴对话未配置，无法获取决策</div>';
-          } else {
-            decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴的决策获取失败 <button type="button" class="hex-chat-ask-yin-btn">重试</button></div>';
-            var retryBtn = decisionDiv.querySelector('.hex-chat-ask-yin-btn');
-            if (retryBtn) retryBtn.addEventListener('click', function() { triggerYinDecision(summaryText, summaryDiv); });
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var taskId = data && data.taskId;
+          if (!taskId) {
+            renderDecisionResult(null, data && data.error ? data.error : '未返回 taskId');
+            return;
           }
-          summaryDiv.appendChild(decisionDiv);
-          if (hexChatMessages) hexChatMessages.scrollTop = hexChatMessages.scrollHeight;
-          // 决策完成后存入历史
-          if (reply) saveHexChatHistory();
-        }
-        var yinBtnAfter = summaryDiv && summaryDiv.querySelector('.hex-chat-ask-yin-btn');
-        if (yinBtnAfter) { yinBtnAfter.disabled = false; yinBtnAfter.textContent = '@阴 请求决策'; }
-      }).catch(function() {
-        if (summaryDiv) {
-          var decisionDiv = document.createElement('div');
-          decisionDiv.className = 'hex-chat-yin-decision';
-          decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴的决策获取失败，网络错误</div>';
-          summaryDiv.appendChild(decisionDiv);
-        }
-        var yinBtnAfter = summaryDiv && summaryDiv.querySelector('.hex-chat-ask-yin-btn');
-        if (yinBtnAfter) { yinBtnAfter.disabled = false; yinBtnAfter.textContent = '@阴 请求决策'; }
-      });
+          function poll() {
+            fetch('/api/yin/task/' + encodeURIComponent(taskId))
+              .then(function(r) { return r.json(); })
+              .then(function(task) {
+                if (task.status === 'done') {
+                  renderDecisionResult(task.reply || null, null);
+                  return;
+                }
+                if (task.status === 'error') {
+                  renderDecisionResult(null, task.error || '未知错误');
+                  return;
+                }
+                setTimeout(poll, 1500);
+              })
+              .catch(function() { setTimeout(poll, 2000); });
+          }
+          poll();
+        })
+        .catch(function() {
+          if (summaryDiv) {
+            var decisionDiv = document.createElement('div');
+            decisionDiv.className = 'hex-chat-yin-decision';
+            decisionDiv.innerHTML = '<div class="hex-chat-summary-label">🌑 阴的决策获取失败，网络错误</div>';
+            summaryDiv.appendChild(decisionDiv);
+          }
+          var btnAfter = summaryDiv && summaryDiv.querySelector('.hex-chat-ask-yin-btn');
+          if (btnAfter) { btnAfter.disabled = false; btnAfter.textContent = '@阴 请求决策'; }
+        });
     }
 
     // P6: 解析阴的结构化决策文本
@@ -2118,6 +2160,7 @@
     // 用 taskId 轮询等待服务端任务完成，使得切换页面不会中断请求
     var _activeTaskId = null;
     var _activeTaskTimer = null;
+    var _hexChatRestoring = false; // 正在从 localStorage 恢复卦任务时为 true，避免 setHexChatFormEnabled 把发送钮重新启用
     var _activeEnableBroadcast = false;
     var _activeHexIds = [];
     function _onHexChatDone(replies, enableBroadcast, hexIds) {
@@ -2524,13 +2567,14 @@
           localStorage.removeItem(TASK_KEY);
           return;
         }
-        // 先把按钮 disabled，防止重复发送
+        _hexChatRestoring = true;
         if (hexChatSend) hexChatSend.disabled = true;
         setHexChatStatus('正在等待卦的回复…');
         fetch('/api/hex/task/' + savedTask.taskId)
           .then(function(r) { return r.json(); })
           .then(function(task) {
             localStorage.removeItem(TASK_KEY);
+            _hexChatRestoring = false;
             if (task.status === 'done') {
               // 任务已完成，服务端已自动保存历史，清空内存缓存后重新从服务端加载，避免重复追加
               if (hexChatMessages) hexChatMessages.innerHTML = '';
@@ -2561,7 +2605,7 @@
             }
           })
           .catch(function() {
-            // 查询失败（如服务重启 taskId 丢失），直接加载服务端历史
+            _hexChatRestoring = false;
             localStorage.removeItem(TASK_KEY);
             setHexChatStatus('');
             if (hexChatSend) hexChatSend.disabled = false;
@@ -2606,12 +2650,70 @@
       });
     });
     (function() {
+      var overlay = document.getElementById('modalClearConfirm');
+      var msgEl = document.getElementById('modalClearMessage');
+      var chk = document.getElementById('modalClearMemory');
+      var btnOk = document.getElementById('modalClearOk');
+      var btnCancel = document.getElementById('modalClearCancel');
+      function showClearConfirmModal(message) {
+        msgEl.textContent = message;
+        chk.checked = false;
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        return new Promise(function(resolve) {
+          function done(confirmed, clearMemory) {
+            overlay.classList.remove('show');
+            overlay.setAttribute('aria-hidden', 'true');
+            resolve({ confirmed: !!confirmed, clearMemory: !!clearMemory });
+          }
+          function onOk() {
+            btnOk.removeEventListener('click', onOk);
+            btnCancel.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlay);
+            done(true, chk.checked);
+          }
+          function onCancel() {
+            btnOk.removeEventListener('click', onOk);
+            btnCancel.removeEventListener('click', onCancel);
+            overlay.removeEventListener('click', onOverlay);
+            done(false, false);
+          }
+          function onOverlay(e) {
+            if (e.target === overlay) onCancel();
+          }
+          btnOk.addEventListener('click', onOk);
+          btnCancel.addEventListener('click', onCancel);
+          overlay.addEventListener('click', onOverlay);
+        });
+      }
       var btnSingle = document.getElementById('hexChatClearSingle');
       var btnDiscuss = document.getElementById('hexChatClearDiscuss');
       var btnAll = document.getElementById('hexChatClearAll');
-      if (btnSingle) btnSingle.addEventListener('click', function() { clearHexChatHistoryByMode('single'); });
-      if (btnDiscuss) btnDiscuss.addEventListener('click', function() { clearHexChatHistoryByMode('discuss'); });
-      if (btnAll) btnAll.addEventListener('click', function() { clearHexChatHistoryByMode('all'); });
+      if (btnSingle) btnSingle.addEventListener('click', function() {
+        showClearConfirmModal('确定清空单聊与卦对话记录？').then(function(r) {
+          if (!r.confirmed) return;
+          clearHexChatHistoryByMode('single');
+          if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
+          show('已清空单聊记录' + (r.clearMemory ? '及本项目记忆' : ''));
+        });
+      });
+      if (btnDiscuss) btnDiscuss.addEventListener('click', function() {
+        showClearConfirmModal('确定清空群聊与卦对话记录？').then(function(r) {
+          if (!r.confirmed) return;
+          clearHexChatHistoryByMode('discuss');
+          if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
+          show('已清空群聊记录' + (r.clearMemory ? '及本项目记忆' : ''));
+        });
+      });
+      if (btnAll) btnAll.addEventListener('click', function() {
+        showClearConfirmModal('确定清空全部与卦对话记录？').then(function(r) {
+          if (!r.confirmed) return;
+          clearHexChatHistoryByMode('all');
+          if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
+          show('已清空全部记录' + (r.clearMemory ? '及本项目记忆' : ''));
+        });
+      });
+      window.showClearConfirmModal = showClearConfirmModal;
     })();
     if (hexChatMessages) {
       hexChatMessages.addEventListener('click', function(e) {
@@ -2698,6 +2800,7 @@
           }
           _yinChatCache = messages;
           messages.forEach(function(msg) { appendYinChatMsg(msg.role, msg.text, false); });
+          if (messages.length === 0) appendYinChatEmptyHint();
         })
         .catch(function(e) {
           console.warn('从服务器加载阴对话历史失败，降级到 localStorage:', e);
@@ -2708,13 +2811,28 @@
               _yinChatCache = msgs;
               msgs.forEach(function(msg) { appendYinChatMsg(msg.role, msg.text, false); });
             }
-          } catch (e2) {}
+            if (yinChatMessages && !yinChatMessages.querySelectorAll('.yin-chat-msg').length) appendYinChatEmptyHint();
+          } catch (e2) {
+            if (yinChatMessages && !yinChatMessages.querySelectorAll('.yin-chat-msg').length) appendYinChatEmptyHint();
+          }
         });
+    }
+
+    function appendYinChatEmptyHint() {
+      if (!yinChatMessages) return;
+      var el = document.createElement('div');
+      el.className = 'yin-chat-empty-hint';
+      el.style.cssText = 'color:var(--text-dim);font-size:0.85rem;padding:12px 0;';
+      el.textContent = '阴已就绪，可与阴对话说明需求。';
+      yinChatMessages.appendChild(el);
+      yinChatMessages.scrollTop = yinChatMessages.scrollHeight;
     }
 
     function appendYinChatMsg(role, text, save) {
       if (save === undefined) save = true;
       if (!yinChatMessages) return;
+      var hint = yinChatMessages.querySelector('.yin-chat-empty-hint');
+      if (hint) hint.remove();
       var div = document.createElement('div');
       div.className = 'yin-chat-msg ' + role;
       var who = role === 'user' ? '我' : '阴';
@@ -2728,6 +2846,31 @@
     }
 
     if (yinChatSend) {
+      var YIN_TASK_KEY = 'yinChatTask_' + (projectId || '');
+      var _yinPollTimer = null;
+      function pollYinTask(taskId) {
+        fetch('/api/yin/task/' + encodeURIComponent(taskId))
+          .then(function(r) { return r.json(); })
+          .then(function(task) {
+            if (task.status === 'done') {
+              try { sessionStorage.removeItem(YIN_TASK_KEY); } catch (e) {}
+              if (task.reply) appendYinChatMsg('yin', task.reply);
+              yinChatSend.disabled = false;
+              saveYinChatHistory();
+              return;
+            }
+            if (task.status === 'error') {
+              try { sessionStorage.removeItem(YIN_TASK_KEY); } catch (e) {}
+              appendYinChatMsg('yin', '（' + (task.error || '暂时无法收到阴的回复') + '）');
+              yinChatSend.disabled = false;
+              return;
+            }
+            _yinPollTimer = setTimeout(function() { pollYinTask(taskId); }, 1500);
+          })
+          .catch(function() {
+            _yinPollTimer = setTimeout(function() { pollYinTask(taskId); }, 2000);
+          });
+      }
       yinChatSend.addEventListener('click', function() {
         var text = (yinChatInput && yinChatInput.value) ? yinChatInput.value.trim() : '';
         if (!text || !projectId) return;
@@ -2739,22 +2882,35 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text, projectId: projectId, history: getYinChatHistoryForAPI() })
         })
-          .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
-          .then(function(result) {
-            var reply = (result.data && result.data.reply != null) ? result.data.reply : null;
-            if (reply) {
-              appendYinChatMsg('yin', reply);
-            } else if (result.status === 501 || (result.data && result.data.error && result.data.error.indexOf('未配置') !== -1)) {
-              appendYinChatMsg('yin', '（阴对话接口未配置。请在面板服务端设置 YIN_CHAT_URL 后重试。）');
-            } else {
-              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + (result.data && result.data.error ? result.data.error : '请求失败') + '）');
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var taskId = data && data.taskId;
+            if (!taskId) {
+              var err = (data && data.error) ? data.error : '未返回 taskId';
+              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + err + '）');
+              yinChatSend.disabled = false;
+              return;
             }
+            try { sessionStorage.setItem(YIN_TASK_KEY, taskId); } catch (e) {}
+            pollYinTask(taskId);
           })
           .catch(function(e) {
             appendYinChatMsg('yin', '（请求失败：' + (e.message || '网络错误') + '）');
-          })
-          .then(function() { yinChatSend.disabled = false; });
+            yinChatSend.disabled = false;
+          });
       });
+      window.addEventListener('beforeunload', function() {
+        if (_yinPollTimer) clearTimeout(_yinPollTimer);
+      });
+      (function() {
+        try {
+          var savedTaskId = sessionStorage.getItem(YIN_TASK_KEY);
+          if (!savedTaskId) return;
+          yinChatSend.disabled = true;
+          show('等待阴回复中…（换页不中断）');
+          pollYinTask(savedTaskId);
+        } catch (e) {}
+      })();
     }
     if (yinChatInput) yinChatInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') yinChatSend.click();
@@ -2763,15 +2919,20 @@
     var yinChatClearBtn = document.getElementById('yinChatClearBtn');
     if (yinChatClearBtn) {
       yinChatClearBtn.addEventListener('click', function() {
-        if (!confirm('确定清空与阴的全部聊天记录？')) return;
-        _yinChatCache = [];
-        if (yinChatMessages) yinChatMessages.innerHTML = '';
-        try { localStorage.removeItem(getYinChatStorageKey()); } catch (e) {}
-        if (projectId) {
-          fetch('/api/chat-history/' + encodeURIComponent(projectId) + '/yin', { method: 'DELETE' })
-            .catch(function(e) { console.warn('清空阴历史失败:', e); });
-        }
-        show('已清空与阴的聊天记录');
+        var fn = window.showClearConfirmModal;
+        if (!fn) return;
+        fn('确定清空与阴的全部聊天记录？').then(function(r) {
+          if (!r.confirmed) return;
+          _yinChatCache = [];
+          if (yinChatMessages) { yinChatMessages.innerHTML = ''; appendYinChatEmptyHint(); }
+          try { localStorage.removeItem(getYinChatStorageKey()); } catch (e) {}
+          if (projectId) {
+            fetch('/api/chat-history/' + encodeURIComponent(projectId) + '/yin', { method: 'DELETE' })
+              .catch(function(e) { console.warn('清空阴历史失败:', e); });
+            if (r.clearMemory) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
+          }
+          show('已清空与阴的聊天记录' + (r.clearMemory ? '及本项目记忆' : ''));
+        });
       });
     }
 
@@ -2867,9 +3028,9 @@
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击停止';
+          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击停止';
         } else {
-          btn.title = (btn.dataset.robot === 'main' ? '阴' : '阳') + ' · 点击启动';
+          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击启动';
         }
       });
     }
