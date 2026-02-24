@@ -1,12 +1,12 @@
 #!/bin/bash
-# 炼丹 冒烟测试：验证 install + 面板能起
+# Yinova 冒烟测试：验证 install + 面板能起
 # 用法：在项目根目录执行 ./smoke-test.sh
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TEST_DIR="/tmp/liandan-smoke-$$"
+TEST_DIR="/tmp/yinova-smoke-$$"
 
-echo "=== 炼丹 冒烟测试 ==="
+echo "=== Yinova 冒烟测试 ==="
 echo "复制到 $TEST_DIR ..."
 
 mkdir -p "$TEST_DIR"

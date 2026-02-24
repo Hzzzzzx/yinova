@@ -1,3 +1,3 @@
-# 炼丹面板
+# Yinova面板
 
 端口 3999，启动：`node server.js`

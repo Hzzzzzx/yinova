@@ -4,9 +4,9 @@
 #       ./start-worker.sh <worker_id> tui                         # 后台起网关再开 TUI
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT_FOR_ENV="${LIANDAN_ROOT:-$SCRIPT_DIR}"
+PROJECT_ROOT_FOR_ENV="${YINOVA_ROOT:-$SCRIPT_DIR}"
 [[ -f "${PROJECT_ROOT_FOR_ENV}/.env" ]] && source "${PROJECT_ROOT_FOR_ENV}/.env" 2>/dev/null || true
-PROJECT_ROOT="${LIANDAN_ROOT:-$SCRIPT_DIR}"
+PROJECT_ROOT="${YINOVA_ROOT:-$SCRIPT_DIR}"
 CONF="${SCRIPT_DIR}/workers.conf"
 OPENCLAW_DIR="${OPENCLAW_DIR:-$PROJECT_ROOT/openclaw}"
 
@@ -58,7 +58,7 @@ fi
 # 后台启动 gateway（使用项目内 openclaw）
 (
   cd "$OPENCLAW_DIR" || exit 1
-  nohup node openclaw.mjs gateway </dev/null >> "/tmp/liandan-worker-${wid}.log" 2>&1 &
+  nohup node openclaw.mjs gateway </dev/null >> "/tmp/yinova-worker-${wid}.log" 2>&1 &
 )
 sleep 2
 for _ in 1 2 3 4 5 6 7 8 9 10; do
@@ -69,10 +69,10 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
     if [[ "$mode" == "tui" ]]; then
       cd "$OPENCLAW_DIR" && exec node openclaw.mjs tui
     fi
-    echo "网关已启动，端口 $port，日志 /tmp/liandan-worker-${wid}.log"
+    echo "网关已启动，端口 $port，日志 /tmp/yinova-worker-${wid}.log"
     exit 0
   fi
   sleep 1
 done
-echo "启动超时，端口 $port 未就绪，请查看 /tmp/liandan-worker-${wid}.log" >&2
+echo "启动超时，端口 $port 未就绪，请查看 /tmp/yinova-worker-${wid}.log" >&2
 exit 1

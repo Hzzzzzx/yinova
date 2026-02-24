@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * 在阴的配置中启用 HTTP Chat 接口，使网页「与阴对话」可用。
- * 用法（在炼丹项目根目录下）：
+ * 用法（在Yinova项目根目录下）：
  *   node panel-web/scripts/enable-main-gateway-chat.js
  *
  * 会依次查找并修改：
- *   1) <炼丹根目录>/阴/moltbot.json
+ *   1) <Yinova根目录>/阴/moltbot.json
  *   2) ~/.moltbot/moltbot.json
  * 找到后写入 gateway.http.endpoints.chatCompletions.enabled = true，并备份原文件。
  * 修改后需重启主网关（面板点「阴·停止」再「阴·启动」）。

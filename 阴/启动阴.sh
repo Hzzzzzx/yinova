@@ -16,7 +16,7 @@ cd "$OPENCLAW_DIR" || exit 1
 
 export OPENCLAW_STATE_DIR="$YIN_DIR"
 export OPENCLAW_GATEWAY_PORT=$MAIN_GATEWAY_PORT
-export LIANDAN_ROOT="$PROJECT_ROOT"
+export YINOVA_ROOT="$PROJECT_ROOT"
 
 # 清除代理环境变量，让 openclaw 直连智谱 API（不需要梯子）
 unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
@@ -28,7 +28,7 @@ else
   echo "启动主网关（端口 ${MAIN_GATEWAY_PORT}）..."
   # 清理可能残留的锁文件
   rm -f "$YIN_DIR"/agents/main/sessions/*.lock 2>/dev/null
-  nohup node openclaw.mjs gateway </dev/null >> /tmp/liandan-main.log 2>&1 &
+  nohup node openclaw.mjs gateway </dev/null >> /tmp/yinova-main.log 2>&1 &
   # 等待 gateway 就绪（最多15秒）
   for i in {1..15}; do
     if lsof -iTCP -sTCP:LISTEN -P -n 2>/dev/null | grep -q ":${MAIN_GATEWAY_PORT} "; then

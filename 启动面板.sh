@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 启动炼丹 Web 面板
+# 启动 Yinova Web 面板
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"

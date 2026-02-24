@@ -106,7 +106,7 @@ hexes/
 *.log
 *.bak
 
-# 非炼丹核心（来自原项目副本）
+# 非Yinova核心（来自原项目副本）
 /bala/
 /crewai/
 /crewai-studio/

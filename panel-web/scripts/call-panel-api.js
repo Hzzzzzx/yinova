@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 命令行调用面板 API，供阴（或用户）执行启停、项目与选卦。
- * 用法（在炼丹项目根目录下）：
+ * 用法（在Yinova项目根目录下）：
  *   node panel-web/scripts/call-panel-api.js robots
  *   node panel-web/scripts/call-panel-api.js projects
  *   node panel-web/scripts/call-panel-api.js start <robot>     # robot: main | lan | qian | tai | ...

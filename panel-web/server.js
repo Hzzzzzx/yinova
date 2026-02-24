@@ -97,7 +97,7 @@ const HEXAGRAM_ROBOTS = [
   { id: 'h64', name: '未济', workerId: 64 },
 ];
 
-const ROOT_DIR = path.join(__dirname, '..');  // 炼丹项目根目录
+const ROOT_DIR = path.join(__dirname, '..');  // Yinova项目根目录
 const OPENCLAW_DIR = process.env.OPENCLAW_DIR || path.join(ROOT_DIR, 'openclaw');
 const CONFIG_FILE = path.join(ROOT_DIR, 'config.json');
 const WORKERS_CONF = path.join(ROOT_DIR, 'workers.conf');
@@ -230,7 +230,7 @@ function startGatewayInBackground(worker) {
 
 // 后台启动主（阴）gateway：端口 18789，使用项目内 openclaw
 const MAIN_GATEWAY_PORT = parseInt((GATEWAY_MAIN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18789;
-const MAIN_GATEWAY_LOG = path.join(os.tmpdir(), 'liandan-main.log');
+const MAIN_GATEWAY_LOG = path.join(os.tmpdir(), 'yinova-main.log');
 function startMainGatewayInBackground() {
   const yinDir = path.join(ROOT_DIR, '阴');
   const cmd = `cd ${OPENCLAW_DIR} && OPENCLAW_STATE_DIR="${yinDir}" OPENCLAW_GATEWAY_PORT=${MAIN_GATEWAY_PORT} nohup node openclaw.mjs gateway </dev/null >> "${MAIN_GATEWAY_LOG}" 2>&1 &`;
@@ -1530,7 +1530,7 @@ app.post('/api/reports/generate', (req, res) => {
 // 与阴对话：走主网关 18789（与终端 moltbot TUI 同一 Claw），不再用 Bala。网关需启用 HTTP chatCompletions。
 const MAIN_GATEWAY_HTTP = `http://127.0.0.1:${MAIN_GATEWAY_PORT}`;
 function getMainGatewayToken() {
-  const envToken = process.env.LIANDAN_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || '';
+  const envToken = process.env.YINOVA_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || '';
   if (envToken) return envToken;
   // 优先从项目内 阴/moltbot.json 读取（install.sh 生成，含随机 token）
   const readTokenFromMoltbot = (p) => {
@@ -1759,7 +1759,7 @@ app.post('/api/yin/chat', async (req, res) => {
         return res.status(502).json({ error: '主网关未开启或不允许 HTTP Chat 接口。请在阴的配置（阴/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启主网关。', reply: null });
       }
       if (response.status === 401) {
-        return res.status(502).json({ error: '主网关鉴权失败(Unauthorized)。面板会从 阴/moltbot.json 的 gateway.auth.token 自动读取 token；若仍报错请设置环境变量 LIANDAN_GATEWAY_TOKEN 后重启面板。', reply: null });
+        return res.status(502).json({ error: '主网关鉴权失败(Unauthorized)。面板会从 阴/moltbot.json 的 gateway.auth.token 自动读取 token；若仍报错请设置环境变量 YINOVA_GATEWAY_TOKEN 后重启面板。', reply: null });
       }
       return res.status(502).json({ error: errMsg, reply: null });
     }

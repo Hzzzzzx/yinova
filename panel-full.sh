@@ -6,7 +6,7 @@
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${LIANDAN_ROOT:-$SCRIPT_DIR}"
+PROJECT_ROOT="${YINOVA_ROOT:-$SCRIPT_DIR}"
 CONF="${SCRIPT_DIR}/workers.conf"
 OPENCLAW_DIR="${OPENCLAW_DIR:-$PROJECT_ROOT/openclaw}"
 YIN_DIR="$PROJECT_ROOT/阴"
@@ -51,12 +51,12 @@ start_main_yin() {
   fi
   ( cd "$OPENCLAW_DIR" && \
     export OPENCLAW_STATE_DIR="$YIN_DIR" OPENCLAW_GATEWAY_PORT=$PORT_MAIN && \
-    nohup node openclaw.mjs gateway </dev/null >> /tmp/liandan-main.log 2>&1 & )
+    nohup node openclaw.mjs gateway </dev/null >> /tmp/yinova-main.log 2>&1 & )
   sleep 2
   if lsof -ti ":$PORT_MAIN" >/dev/null 2>&1; then
-    echo "主(阴) 已启动，端口 $PORT_MAIN，日志 /tmp/liandan-main.log"
+    echo "主(阴) 已启动，端口 $PORT_MAIN，日志 /tmp/yinova-main.log"
   else
-    echo "启动失败，请查看 /tmp/liandan-main.log"
+    echo "启动失败，请查看 /tmp/yinova-main.log"
     return 1
   fi
 }

@@ -26,7 +26,7 @@
         "primary": "zai/glm-5",
         "fallbacks": ["zai/glm-4.7"]
       },
-      "workspace": "__LIANDAN_ROOT__/阴/workspace",
+      "workspace": "__YINOVA_ROOT__/阴/workspace",
       "maxConcurrent": 4,
       "subagents": {
         "maxConcurrent": 8

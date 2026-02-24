@@ -1,4 +1,4 @@
-# 炼丹
+# Yinova
 
 64 卦群控面板 · openclaw 多开 · 一键部署 · v0.1
 
@@ -8,7 +8,7 @@
 
 ```bash
 # 1. 克隆并安装
-git clone https://github.com/goldct/liandan && cd liandan
+git clone https://github.com/goldct/yinova && cd yinova
 chmod +x install.sh 启动面板.sh
 ./install.sh
 
@@ -42,7 +42,7 @@ chmod +x install.sh 启动面板.sh
 ## 结构
 
 ```
-liandan/
+yinova/
 ├── openclaw/          # install 拉取，不纳入版本库
 ├── hex-template/      # 卦模板
 ├── hexes/             # 由 install 生成，64 卦（不纳入版本库）
@@ -55,7 +55,7 @@ liandan/
 
 ## 便携使用
 
-`install` + `npm install` 后，可将整个 `liandan` 目录复制到 U 盘或另一台机器。目标机只需安装 Node.js 18+，执行 `./启动面板.sh` 或双击 `启动面板.command` 即可。
+`install` + `npm install` 后，可将整个 `yinova` 目录复制到 U 盘或另一台机器。目标机只需安装 Node.js 18+，执行 `./启动面板.sh` 或双击 `启动面板.command` 即可。
 
 ## 常见问题
 

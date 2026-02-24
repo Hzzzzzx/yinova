@@ -5,7 +5,7 @@
   "agents": {
     "defaults": {
       "model": {"primary": "zai/glm-5", "fallbacks": ["zai/glm-4.7"]},
-      "workspace": "__LIANDAN_ROOT__/hexes/__HEX_NAME__/workspace",
+      "workspace": "__YINOVA_ROOT__/hexes/__HEX_NAME__/workspace",
       "maxConcurrent": 4,
       "subagents": {"maxConcurrent": 8}
     }
@@ -16,7 +16,7 @@
     "port": 99999,
     "mode": "local",
     "bind": "loopback",
-    "auth": {"mode": "token", "token": "liandan_local_replace_me"},
+    "auth": {"mode": "token", "token": "yinova_local_replace_me"},
     "tailscale": {"mode": "off"},
     "http": {"endpoints": {"chatCompletions": {"enabled": true}}}
   },
