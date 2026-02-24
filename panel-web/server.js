@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * 机器人 TUI 面板：主、lan、易经 64 卦
- * - 主/lan：点启动 → 直接弹终端开 TUI（需本机已起对应网关）。
+ * Yinova 面板：阴（主网关）+ 易经 64 卦控制
+ * - 主：点启动 → 弹终端运行 启动阴.sh（网关 + TUI）。
  * - 乾～未济：点启动 → 若对应端口未占用会先自动起网关，再弹终端开 TUI（一键启动）。
  */
 const express = require('express');
@@ -24,10 +24,7 @@ app.use((err, req, res, next) => {
 });
 
 const homedir = os.homedir();
-const OPENCLAW_WORKSPACE_LAN = process.env.OPENCLAW_WORKSPACE_LAN || path.join(homedir, '.openclaw/workspace-lan');
-const OPENCLAW_CONFIG_DIR_LAN = process.env.OPENCLAW_CONFIG_DIR_LAN || path.join(homedir, '.openclaw-lan');
 const GATEWAY_MAIN = process.env.GATEWAY_MAIN || 'ws://127.0.0.1:18789';
-const GATEWAY_LAN = process.env.GATEWAY_LAN || 'ws://127.0.0.1:18790';
 
 // 易经 64 卦（对应 workers.conf 1～64）
 const HEXAGRAM_ROBOTS = [
@@ -179,7 +176,7 @@ const ID_FILE = (robot) => path.join(__dirname, '.panel-window-' + robot);
 // 状态检测逻辑：只看「网关端口是否在监听」——某卦 running = 该卦在 workers.conf 中的端口有进程 LISTEN
 // 数据来源：lsof -iTCP -sTCP:LISTEN -P -n，解析出 18789/18790/18791～18854 中哪些在监听
 const PANEL_PORTS = new Set([
-  18789, 18790,
+  18789,
   ...Array.from({ length: 64 }, (_, i) => 18791 + i),
 ]);
 let _portsCache = null;
@@ -291,17 +288,15 @@ function stopAndCloseTerminal(robot) {
 function getRobotsList() {
   const inUse = getPortsInUse();
   const mainPort = parseInt((GATEWAY_MAIN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18789;
-  const lanPort = parseInt((GATEWAY_LAN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18790;
   const list = [
-    { id: 'main', name: '主', desc: 'moltbot tui', gateway: GATEWAY_MAIN, running: inUse.has(mainPort) },
-    { id: 'lan', name: 'lan', desc: 'openclaw tui', gateway: GATEWAY_LAN, running: inUse.has(lanPort) },
+    { id: 'main', name: '主', desc: 'Yinova 阴', gateway: GATEWAY_MAIN, running: inUse.has(mainPort) },
   ];
   HEXAGRAM_ROBOTS.forEach((h) => {
     const w = getWorkerByHex(h.id);
     const port = w ? w.port : (18790 + h.workerId);
     const portNum = parseInt(port, 10);
     const gw = process.env['GATEWAY_' + h.id.toUpperCase()] || ('ws://127.0.0.1:' + port);
-    list.push({ id: h.id, name: h.name, desc: 'moltbot tui', gateway: gw, port: portNum, running: inUse.has(portNum) });
+    list.push({ id: h.id, name: h.name, desc: 'Yinova 卦', gateway: gw, port: portNum, running: inUse.has(portNum) });
   });
   return list;
 }
@@ -1336,7 +1331,7 @@ app.post('/api/pipeline/platform-to-project', (req, res) => {
 app.get('/api/health/hexagrams', (_req, res) => {
   try {
     const list = getRobotsList();
-    const hexList = list.filter((r) => r.id !== 'main' && r.id !== 'lan');
+    const hexList = list.filter((r) => r.id !== 'main');
     res.json(hexList.map((r) => ({ id: r.id, name: r.name, running: !!r.running, port: r.port })));
   } catch (err) {
     res.status(500).json({ error: err.message || '健康检查失败' });
@@ -1404,7 +1399,7 @@ app.get('/api/alerts/events', (req, res) => {
 app.post('/api/alerts/check', (_req, res) => {
   try {
     const events = [];
-    const hexList = getRobotsList().filter((r) => r.id !== 'main' && r.id !== 'lan');
+    const hexList = getRobotsList().filter((r) => r.id !== 'main');
     hexList.filter((r) => !r.running).forEach((r) => {
       events.push({ type: 'hexagram_crashed', hexId: r.id, severity: 'critical' });
       appendAlertEvent({ type: 'hexagram_crashed', hexId: r.id, severity: 'critical' });
@@ -1427,7 +1422,7 @@ app.post('/api/alerts/check', (_req, res) => {
 
 app.post('/api/self-heal/hexagrams', async (req, res) => {
   try {
-    const list = getRobotsList().filter((r) => r.id !== 'main' && r.id !== 'lan' && !r.running);
+    const list = getRobotsList().filter((r) => r.id !== 'main' && !r.running);
     const restarted = [];
     for (const r of list) {
       const worker = getWorkerByHex(r.id);
@@ -2584,7 +2579,7 @@ function getSystemStats() {
   const swapUsedBytes = getMacOSSwapUsed();
   const swapUsedMB = swapUsedBytes != null ? Math.round(swapUsedBytes / 1024 / 1024) : null;
   // 检查是否有卦在运行（用于告警逻辑）
-  const hexRunning = getRobotsList().filter(r => r.id !== 'main' && r.id !== 'lan' && r.running).length;
+  const hexRunning = getRobotsList().filter(r => r.id !== 'main' && r.running).length;
   const warnings = [];
   if (memoryUsedPercent >= 90) warnings.push({ level: 'danger', text: '内存占用 ' + memoryUsedPercent + '%，建议少开或关闭部分机器人' });
   else if (memoryUsedPercent >= 80) warnings.push({ level: 'warn', text: '内存占用 ' + memoryUsedPercent + '%，注意负载' });
@@ -2625,13 +2620,6 @@ app.post('/api/open-tui/:robot', (req, res) => {
       // 阴：使用项目内的启动脚本
       const yinStartScript = path.join(ROOT_DIR, '阴', '启动阴.sh');
       runTerminalScript('main', `bash "${yinStartScript}"`);
-      return res.json({ ok: true });
-    }
-    if (robot === 'lan') {
-      // 阳：openclaw tui，终端标题「阳 - openclaw」与谦一致风格
-      const lanTitle = "printf '\\033]0;阳 - openclaw\\007'; ";
-      const cmd = lanTitle + `cd ${OPENCLAW_WORKSPACE_LAN} && OPENCLAW_CONFIG_DIR=${OPENCLAW_CONFIG_DIR_LAN} openclaw --profile lan tui --url ws://127.0.0.1:18790 --token lan123`;
-      runTerminalScript('lan', cmd);
       return res.json({ ok: true });
     }
     const worker = getWorkerByHex(robot);
@@ -2754,21 +2742,14 @@ app.post('/api/close-all-hex-terminals', async (req, res) => {
   }
 });
 
-// 精准停止：主 / lan / 指定卦（关网关进程 + 若有则关对应终端窗口；先 C+C 关窗再杀端口）
+// 精准停止：主 / 指定卦（关网关进程 + 若有则关对应终端窗口）
 const PORT_MAIN = 18789;
-const PORT_LAN = 18790;
 app.post('/api/stop/:robot', async (req, res) => {
   try {
     const robot = req.params.robot;
     if (robot === 'main') {
       stopAndCloseTerminal('main');
       spawnSync('bash', [STOP_WORKER_SH, '--port', String(PORT_MAIN)], { cwd: ROOT_DIR, encoding: 'utf8' });
-      _portsCache = null; _portsCacheTime = 0;
-      return res.json({ ok: true });
-    }
-    if (robot === 'lan') {
-      stopAndCloseTerminal('lan');
-      spawnSync('bash', [STOP_WORKER_SH, '--port', String(PORT_LAN)], { cwd: ROOT_DIR, encoding: 'utf8' });
       _portsCache = null; _portsCacheTime = 0;
       return res.json({ ok: true });
     }
@@ -2814,7 +2795,7 @@ const PORT = Number(process.env.PANEL_WEB_PORT) || 3999;
 try { syncGatewayPortFromWorkersConf(); } catch (_) {}
 try { syncDisableBrowserInMoltbot(); } catch (_) {}
 const server = app.listen(PORT, () => {
-  console.log(`http://localhost:${PORT} — 点启动即弹出终端执行: cd ${OPENCLAW_DIR} && node openclaw.mjs tui`);
+  console.log(`\n  Yinova 面板已启动 → http://localhost:${PORT}\n`);
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {

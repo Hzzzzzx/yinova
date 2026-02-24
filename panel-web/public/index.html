@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>六十四卦 · 机器人 TUI</title>
+  <title>Yinova · 六十四卦控制面板</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
@@ -217,31 +217,16 @@
       transition: box-shadow 0.2s, background 0.2s;
     }
     /* 未点击时透明，悬停略显 */
-    .taiji-dot[data-robot="main"] { left: 50%; top: 32%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
-    .taiji-dot[data-robot="lan"] { left: 50%; top: 68%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
+    .taiji-dot[data-robot="main"] { left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(120,120,120,0.3); }
     .taiji-dot[data-robot="main"]:hover { background: rgba(140,140,140,0.45); }
-    .taiji-dot[data-robot="lan"]:hover { background: rgba(140,140,140,0.45); }
     .taiji-dot.running { }
-    /* 点击后：原黑钮(阴)变白+白呼吸光，原白钮(阳)变黑+黑呼吸光 */
     .taiji-dot[data-robot="main"].running {
       background: #f0ece8;
       animation: breathe-dot-white 2s ease-in-out infinite;
     }
-    .taiji-dot[data-robot="lan"].running {
-      background: #0a0a0e;
-      animation: breathe-dot-black 2s ease-in-out infinite;
-    }
     .taiji-dot[data-robot="main"].starting {
       background: #f0ece8;
       animation: breathe-dot-white 1.5s ease-in-out infinite;
-    }
-    .taiji-dot[data-robot="lan"].starting {
-      background: #0a0a0e;
-      animation: breathe-dot-black 1.5s ease-in-out infinite;
-    }
-    @keyframes breathe-dot-black {
-      0%, 100% { box-shadow: 0 0 8px rgba(0,0,0,0.8), 0 0 16px rgba(40,40,55,0.5); }
-      50% { box-shadow: 0 0 18px rgba(0,0,0,0.95), 0 0 28px rgba(50,50,70,0.6); }
     }
     @keyframes breathe-dot-white {
       0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3); }
@@ -367,7 +352,7 @@
       50% { box-shadow: 0 0 28px var(--breathe-color, var(--glow)); opacity: 0.95; }
     }
     .card-hex .card-title {
-      font-family: "ZCOOL KuaiLe", "Noto Serif SC", serif;
+      font-family: "ZCOOL KuaiLe", "Noto Serif SC", "PingFang SC", serif;
       font-size: 1rem;
       font-weight: 500;
       margin: 0;
@@ -435,8 +420,8 @@
     <div class="header-row">
       <span></span>
       <div class="header-center">
-        <h1>六十四卦</h1>
-        <p class="sub">· 机器人 TUI ·</p>
+        <h1>Yinova</h1>
+        <p class="sub">· 六十四卦 · 阴 · 多实例控制面板 ·</p>
         <p class="yin-status-bar" id="yinStatusBar">
           <span class="yin-status-dot" id="yinStatusDot"></span>
           <span id="yinStatusText">阴 · 检测中…</span>
@@ -472,7 +457,6 @@
         <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
       </svg>
       <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
-      <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
     </div>
   </div>
   <div class="section-hexagrams">
@@ -554,14 +538,13 @@
 
     function displayName(robot) {
       if (robot.id === 'main') return '阴';
-      if (robot.id === 'lan') return '阳';
       return robot.name;
     }
 
     function updateCardsRunning(robots) {
       const byId = {};
       robots.forEach(r => { byId[r.id] = r; });
-      const hexRunning = robots.filter(r => r.id !== 'main' && r.id !== 'lan' && r.running).length;
+      const hexRunning = robots.filter(r => r.id !== 'main' && r.running).length;
       const labelEl = document.getElementById('hexLabel');
       if (labelEl) labelEl.textContent = '卦象 · 已启动 ' + hexRunning;
       rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
@@ -642,13 +625,12 @@
       } catch (_) {}
       return [
         { id: 'main', name: '主', gateway: 'ws://127.0.0.1:18789', running: false },
-        { id: 'lan', name: 'lan', gateway: 'ws://127.0.0.1:18790', running: false },
       ];
     }
 
     async function render() {
       let robots = await fetchRobots();
-      const hexagrams = robots.filter(r => r.id !== 'main' && r.id !== 'lan');
+      const hexagrams = robots.filter(r => r.id !== 'main');
 
       rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
         const robotId = btn.dataset.robot;
