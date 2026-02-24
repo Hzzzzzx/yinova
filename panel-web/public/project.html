@@ -6,7 +6,7 @@
   <title>项目 · Yinova</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
   <style>
     :root {
       --black: #000000;
@@ -172,6 +172,10 @@
       0%, 100% { box-shadow: 0 0 8px rgba(255,255,255,0.6), 0 0 16px rgba(255,255,255,0.3); }
       50% { box-shadow: 0 0 20px rgba(255,255,255,0.9), 0 0 32px rgba(255,255,255,0.5); }
     }
+    html[lang="en"] .ring-hex,
+    html[lang="en"] .hex-switch-item .hex-name,
+    html[lang="en"] .hex-chat-msg .hex-name,
+    html[lang="en"] .select-hex-btn { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     .ring-hex {
       position: absolute;
       left: 50%;
@@ -947,20 +951,21 @@
   .yin-chat-md strong { color: #e8d6a0; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <script src="i18n.js"></script>
 </head>
-<body>
+<body data-i18n-title="projectTitle">
   <div id="starfield"></div>
   <div class="page-content">
     <div class="header">
       <nav class="breadcrumb" id="breadcrumb">
-        <a href="projects.html" class="link-back" id="linkBack">← 项目列表</a>
+        <a href="projects.html" class="link-back" id="linkBack" data-i18n="linkBackToProjects">← 项目列表</a>
         <span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> · </span>
         <span class="breadcrumb-project" id="breadcrumbProject"></span>
       </nav>
-      <h1>项目</h1>
-      <span></span>
+      <h1 data-i18n="projects">项目</h1>
+      <span id="yinova-lang-toggle-wrap"></span>
     </div>
-    <div class="project-name" id="projectName">加载中…</div>
+    <div class="project-name" id="projectName" data-i18n="loading">加载中…</div>
 
     <section class="taiji-section">
       <div class="taiji-ring" id="taijiRing">
@@ -973,24 +978,24 @@
             <circle class="stroke" cx="50" cy="50" r="50"/>
             <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
           </svg>
-          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
-          <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
+          <button type="button" class="taiji-dot" data-robot="main" data-i18n-title="yinClickMain" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
+          <button type="button" class="taiji-dot" data-robot="lan" data-i18n-title="yangClickStart" title="阳 · 点击启动" aria-label="阳"></button>
         </div>
         <div id="ringHexes"></div>
       </div>
     </section>
     <div class="taiji-actions" id="taijiActions">
-      <button type="button" class="btn-open-select-hex" id="btnOpenSelectHex">选卦</button>
+      <button type="button" class="btn-open-select-hex" id="btnOpenSelectHex" data-i18n="selectHex">选卦</button>
     </div>
 
     <div class="modal-overlay" id="modalSelectHex" aria-hidden="true">
       <div class="modal-select-hex">
-        <h2>选择卦象 · 点击加入/取消加入本项目</h2>
+        <h2 data-i18n="selectHexModalTitle">选择卦象 · 点击加入/取消加入本项目</h2>
         <div class="modal-body">
           <div class="select-hex-grid" id="selectHexGrid"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="modal-btn-done" id="modalBtnDone">完成</button>
+          <button type="button" class="modal-btn-done" id="modalBtnDone" data-i18n="modalDone">完成</button>
         </div>
       </div>
     </div>
@@ -998,42 +1003,42 @@
     <div class="modal-overlay" id="modalClearConfirm" aria-hidden="true">
       <div class="modal-select-hex modal-clear-confirm">
         <p class="modal-clear-message" id="modalClearMessage"></p>
-        <label class="modal-clear-checkbox"><input type="checkbox" id="modalClearMemory" /> 同时清空本项目记忆</label>
+        <label class="modal-clear-checkbox"><input type="checkbox" id="modalClearMemory" /> <span data-i18n="clearMemoryAlso">同时清空本项目记忆</span></label>
         <div class="modal-footer">
-          <button type="button" class="modal-btn-done" id="modalClearCancel">取消</button>
-          <button type="button" class="modal-btn-done" id="modalClearOk">确定</button>
+          <button type="button" class="modal-btn-done" id="modalClearCancel" data-i18n="cancel">取消</button>
+          <button type="button" class="modal-btn-done" id="modalClearOk" data-i18n="ok">确定</button>
         </div>
       </div>
     </div>
 
     <section class="section-hex-switches" id="sectionHexSwitches" style="display:none;">
-      <h2>本项目卦象 · 启停
+      <h2 data-i18n="hexSwitchesTitle">本项目卦象 · 启停
         <span class="hex-switches-batch-btns">
-          <button type="button" class="btn-hex-batch" id="btnStartAllHex">一键启动</button>
-          <button type="button" class="btn-hex-batch stop-all" id="btnStopAllHex">一键停止</button>
+          <button type="button" class="btn-hex-batch" id="btnStartAllHex" data-i18n="startAll">一键启动</button>
+          <button type="button" class="btn-hex-batch stop-all" id="btnStopAllHex" data-i18n="stopAll">一键停止</button>
         </span>
       </h2>
       <div class="hex-switches" id="hexSwitches"></div>
     </section>
 
     <div class="chat-sections-container" id="chatSectionsContainer">
-      <button type="button" class="chat-fullscreen-toggle" id="chatFullscreenToggle" title="点击固定为全屏">固定</button>
+      <button type="button" class="chat-fullscreen-toggle" id="chatFullscreenToggle" data-i18n-title="pinFullscreen" data-i18n="pinFullscreenShort" title="点击固定为全屏">固定</button>
       <div class="layout-switcher" id="layoutSwitcher">
-        <span class="layout-dot" id="dotHex" title="与卦对话全屏"></span>
-        <span class="layout-dot active" id="dotHalf" title="左右各半，可拖动调整"></span>
-        <span class="layout-dot" id="dotYin" title="与阴对话全屏"></span>
+        <span class="layout-dot" id="dotHex" data-i18n-title="layoutHexFull" title="与卦对话全屏"></span>
+        <span class="layout-dot active" id="dotHalf" data-i18n-title="layoutHalf" title="左右各半，可拖动调整"></span>
+        <span class="layout-dot" id="dotYin" data-i18n-title="layoutYinFull" title="与阴对话全屏"></span>
       </div>
       <section class="section-hex-chat" id="panelHexChat">
-        <h2>与卦对话</h2>
-        <div class="hex-chat-file-warn" id="hexChatFileWarn" style="display:none;">当前为文件方式打开页面，与卦对话无法请求接口。请用浏览器打开：<strong>http://localhost:3999/project.html</strong>（并确保已启动面板）。</div>
-        <div class="hex-chat-empty" id="hexChatEmpty">请先在「选卦」中为本项目添加卦象，再在此发消息；向本项目各卦群发，回复按卦展示（类似群聊）。</div>
+        <h2 data-i18n="withHex">与卦对话</h2>
+        <div class="hex-chat-file-warn" id="hexChatFileWarn" style="display:none;" data-i18n="hexChatFileWarn">当前为文件方式打开页面，与卦对话无法请求接口。请用浏览器打开：<strong>http://localhost:3999/project.html</strong>（并确保已启动面板）。</div>
+        <div class="hex-chat-empty" id="hexChatEmpty" data-i18n="hexChatEmpty">请先在「选卦」中为本项目添加卦象，再在此发消息；向本项目各卦群发，回复按卦展示（类似群聊）。</div>
         <div class="hex-chat-mode-row" id="hexChatModeRow" style="display:none;">
-          <span class="hex-chat-mode-label">模式：</span>
-        <label class="hex-chat-mode-opt" title="群发单聊：所有卦都收到消息，但看不到其他卦的回复。@ 触发时只让被 @ 的卦回复。"><input type="radio" name="hexChatMode" value="single" /> 群发单聊</label>
-        <label class="hex-chat-mode-opt" title="群讨论：各卦能看到其他卦的回复，并可追加讨论。"><input type="radio" name="hexChatMode" value="discuss" checked /> 群讨论</label>
-        <label class="hex-chat-mode-opt" title="执行任务：通过 WebSocket 让指定卦真正调用工具执行任务（写文件、运行命令等），结果保存到项目产出目录。需指定 @卦名。"><input type="radio" name="hexChatMode" value="agent" /> ⚡ 执行任务</label>
+          <span class="hex-chat-mode-label" data-i18n="modeLabel">模式：</span>
+        <label class="hex-chat-mode-opt" data-i18n-title="modeSingleTitle"><input type="radio" name="hexChatMode" value="single" /> <span data-i18n="modeSingle">群发单聊</span></label>
+        <label class="hex-chat-mode-opt" data-i18n-title="modeDiscussTitle"><input type="radio" name="hexChatMode" value="discuss" checked /> <span data-i18n="modeDiscuss">群讨论</span></label>
+        <label class="hex-chat-mode-opt" data-i18n-title="modeAgentTitle"><input type="radio" name="hexChatMode" value="agent" /> ⚡ <span data-i18n="modeAgent">执行任务</span></label>
           <span class="hex-chat-rounds-wrap" id="hexChatRoundsWrap">
-            <button type="button" class="hex-chat-rounds-btn" id="hexChatRoundsBtn" title="选择讨论轮数">多轮：<span id="hexChatRoundsValue">2</span> 轮 <span class="hex-chat-rounds-arrow">▼</span></button>
+            <button type="button" class="hex-chat-rounds-btn" id="hexChatRoundsBtn" data-i18n-title="roundsSelect" title="选择讨论轮数"><span data-i18n="rounds">多轮</span>：<span id="hexChatRoundsValue">2</span> <span data-i18n="roundSuffix">轮</span> <span class="hex-chat-rounds-arrow">▼</span></button>
             <div class="hex-chat-rounds-popover" id="hexChatRoundsPopover">
               <button type="button" class="hex-chat-rounds-opt" data-rounds="1" title="1轮：各卦独立回复，不互相看">1 轮</button>
               <button type="button" class="hex-chat-rounds-opt" data-rounds="2" title="2轮：首轮后各卦看到彼此回复，可追加">2 轮</button>
@@ -1044,30 +1049,30 @@
           </span>
         </div>
         <div class="hex-chat-row" id="hexChatRow" style="display:none;">
-          <input type="text" id="hexChatInput" placeholder="输入消息，向本项目各卦发送…" maxlength="2000" />
-          <button type="button" class="hex-chat-send" id="hexChatSend">发送</button>
+          <input type="text" id="hexChatInput" data-i18n-placeholder="inputToHex" placeholder="输入消息，向本项目各卦发送…" maxlength="2000" />
+          <button type="button" class="hex-chat-send" id="hexChatSend" data-i18n="send">发送</button>
         </div>
         <div class="hex-chat-toolbar" id="hexChatToolbar" style="display:none;">
           <span class="hex-chat-state" id="hexChatState"></span>
-          <button type="button" class="hex-chat-clear-btn" id="hexChatClearSingle" title="只清空群发单聊产生的消息">清空单聊</button>
-          <button type="button" class="hex-chat-clear-btn" id="hexChatClearDiscuss" title="只清空群讨论产生的消息">清空群聊</button>
-          <button type="button" class="hex-chat-clear-btn" id="hexChatClearAll" title="清空全部与卦对话历史">清空全部</button>
-          <button type="button" class="hex-chat-clear-btn" id="btnUpdateMemory" title="让阴提炼本次对话的关键内容，存入项目记忆">📝 更新记忆</button>
-          <button type="button" class="hex-chat-clear-btn" id="btnShowFiles" title="查看本项目各卦的产出文件">📁 产出文件</button>
-          <button type="button" class="hex-chat-clear-btn" id="btnDispatchTask" title="把当前讨论内容作为背景，派发执行任务给指定卦">⚡ 派发任务</button>
+          <button type="button" class="hex-chat-clear-btn" id="hexChatClearSingle" data-i18n-title="clearSingleTitle" data-i18n="clearSingle">清空单聊</button>
+          <button type="button" class="hex-chat-clear-btn" id="hexChatClearDiscuss" data-i18n-title="clearDiscussTitle" data-i18n="clearDiscuss">清空群聊</button>
+          <button type="button" class="hex-chat-clear-btn" id="hexChatClearAll" data-i18n-title="clearAllTitle" data-i18n="clearAll">清空全部</button>
+          <button type="button" class="hex-chat-clear-btn" id="btnUpdateMemory" data-i18n="updateMemory" data-i18n-title="updateMemoryTitle">📝 更新记忆</button>
+          <button type="button" class="hex-chat-clear-btn" id="btnShowFiles" data-i18n="outputFiles" data-i18n-title="projectFilesTitle">📁 产出文件</button>
+          <button type="button" class="hex-chat-clear-btn" id="btnDispatchTask" data-i18n="dispatchTask" data-i18n-title="dispatchTaskTitle">⚡ 派发任务</button>
         </div>
         <!-- 派发任务面板 -->
         <div id="dispatchPanel" style="display:none;">
           <div class="dispatch-panel">
-            <div class="dispatch-panel-title">⚡ 派发执行任务 <span style="font-size:0.72rem; color:var(--text-dim); font-weight:400;">（卦将通过工具真实执行，写文件/运行命令等）</span></div>
-            <div class="dispatch-context-label">讨论背景（自动提取，可忽略）：</div>
+            <div class="dispatch-panel-title" data-i18n="dispatchPanelTitle">⚡ 派发执行任务</div>
+            <div class="dispatch-context-label" data-i18n="dispatchContextLabel">讨论背景（自动提取，可忽略）：</div>
             <div class="dispatch-context" id="dispatchContext"></div>
-            <textarea class="dispatch-instruction" id="dispatchInstruction" placeholder="输入具体执行指令，例如：根据上面的讨论，生成一个完整的 PRD 文档，保存到 output/ 目录"></textarea>
-            <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:6px;">选择执行卦：</div>
+            <textarea class="dispatch-instruction" id="dispatchInstruction" data-i18n-placeholder="dispatchInstructionPlaceholder" placeholder="输入具体执行指令，例如：根据上面的讨论，生成一个完整的 PRD 文档，保存到 output/ 目录"></textarea>
+            <div style="font-size:0.78rem; color:var(--text-dim); margin-bottom:6px;" data-i18n="selectExecHex">选择执行卦：</div>
             <div class="dispatch-hex-list" id="dispatchHexList"></div>
             <div class="dispatch-actions">
-              <button type="button" class="dispatch-send-btn" id="dispatchSendBtn">派发</button>
-              <button type="button" class="dispatch-cancel-btn" id="dispatchCancelBtn">取消</button>
+              <button type="button" class="dispatch-send-btn" id="dispatchSendBtn" data-i18n="dispatchSend">派发</button>
+              <button type="button" class="dispatch-cancel-btn" id="dispatchCancelBtn" data-i18n="cancel">取消</button>
               <span class="dispatch-status" id="dispatchStatus"></span>
             </div>
           </div>
@@ -1075,10 +1080,10 @@
         <!-- 产出文件面板 -->
         <div id="projectFilesPanel" style="display:none; margin:8px 0; border:1px solid rgba(201,162,39,0.25); border-radius:8px; background:rgba(201,162,39,0.03); padding:10px 14px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <span style="font-size:0.82rem; color:var(--gold-dim); font-weight:500;">📁 项目产出文件</span>
+            <span style="font-size:0.82rem; color:var(--gold-dim); font-weight:500;" data-i18n="projectFilesTitle">📁 项目产出文件</span>
             <div style="display:flex; gap:8px;">
-              <button type="button" class="hex-chat-clear-btn" id="btnRefreshFiles" style="padding:2px 8px; font-size:0.75rem;">刷新</button>
-              <button type="button" class="hex-chat-clear-btn" id="btnCloseFiles" style="padding:2px 8px; font-size:0.75rem;">关闭</button>
+              <button type="button" class="hex-chat-clear-btn" id="btnRefreshFiles" style="padding:2px 8px; font-size:0.75rem;" data-i18n="refresh">刷新</button>
+              <button type="button" class="hex-chat-clear-btn" id="btnCloseFiles" style="padding:2px 8px; font-size:0.75rem;" data-i18n="close">关闭</button>
             </div>
           </div>
           <div id="projectFilesList" style="font-size:0.8rem; color:var(--text-dim); max-height:180px; overflow-y:auto;"></div>
@@ -1089,11 +1094,11 @@
 
       <div class="chat-resizer" id="chatResizer"></div>
       <section class="section-yin-chat" id="panelYinChat">
-        <h2>与阴对话<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
-        <p class="yin-chat-hint">此处对话仅属于当前项目</p>
+        <h2><span data-i18n="withYin">与阴对话</span><button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn" data-i18n="clearRecord">清空记录</button></h2>
+        <p class="yin-chat-hint" data-i18n="yinDesc">此处对话仅属于当前项目</p>
         <div class="yin-chat-row">
-          <input type="text" id="yinChatInput" placeholder="输入消息，与阴总控对话…" maxlength="2000" />
-          <button type="button" class="yin-chat-send" id="yinChatSend">发送</button>
+          <input type="text" id="yinChatInput" data-i18n-placeholder="inputToYin" placeholder="输入消息，与阴总控对话…" maxlength="2000" />
+          <button type="button" class="yin-chat-send" id="yinChatSend" data-i18n="send">发送</button>
         </div>
         <div class="yin-chat-messages" id="yinChatMessages"></div>
       </section>
@@ -1102,6 +1107,8 @@
     <div class="toast" id="toast"></div>
   </div>
   <script>
+    var t = window.YINOVA_I18N && window.YINOVA_I18N.t ? window.YINOVA_I18N.t.bind(window.YINOVA_I18N) : function(k) { var a = Array.prototype.slice.call(arguments, 1); return (a.length ? (k || '').replace(/\{(\d+)\}/g, function(_, i) { return a[Number(i)] != null ? a[Number(i)] : _; }) : k) || k; };
+    var getHexDisplayName = window.YINOVA_I18N && window.YINOVA_I18N.getHexDisplayName ? function(id, name) { return window.YINOVA_I18N.getHexDisplayName(id, name); } : function(id, name) { return name || id; };
     (function initStarfield() {
       var container = document.getElementById('starfield');
       if (!container) return;
@@ -1331,7 +1338,7 @@
       var on = enabled && !isFileProtocol;
       var hexPending = (typeof _activeTaskId !== 'undefined' && _activeTaskId != null) || (typeof _activeAgentTasks !== 'undefined' && _activeAgentTasks && _activeAgentTasks.size > 0) || (typeof _hexChatRestoring !== 'undefined' && _hexChatRestoring);
       if (hexChatSend) hexChatSend.disabled = !on || !!hexPending;
-      if (hexChatInput) { hexChatInput.disabled = !on; hexChatInput.placeholder = on ? '输入消息，向本项目各卦发送…' : '请用 http://localhost:3999/project.html 打开页面后再发消息'; }
+      if (hexChatInput) { hexChatInput.disabled = !on; hexChatInput.placeholder = on ? t('inputToHex') : t('hexChatFileHint'); }
     }
 
     function show(msg) {
@@ -1363,7 +1370,7 @@
       for (var i = 0; i < n; i++) {
         var hexId = hexIds[i];
         var hex = hexList.find(function(h) { return h.id === hexId; });
-        var name = hex ? hex.name : hexId;
+        var name = getHexDisplayName(hexId, hex ? hex.name : hexId);
         var char = displayChar(name);
         var angle = (i / n) * 2 * Math.PI - Math.PI / 2;
         var x = 50 + radiusPct * Math.cos(angle);
@@ -1394,7 +1401,7 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'select-hex-btn' + (added ? ' added' : '');
-        btn.textContent = h.name;
+        btn.textContent = getHexDisplayName(h.id, h.name);
         btn.dataset.hexId = h.id;
         btn.addEventListener('click', function() { toggleHexInProject(h.id); });
         selectHexGrid.appendChild(btn);
@@ -1433,12 +1440,12 @@
             if (modalSelectHex.classList.contains('show')) renderSelectHexGrid();
             updateHexChatModeUI();
             updateHexChatRoundsUI();
-            show('已更新');
+            show(t('toastUpdated'));
           } else {
-            show(result.data.error || '更新失败');
+            show(result.data.error || t('toastUpdateFailed'));
           }
         })
-        .catch(function() { show('请求失败'); });
+        .catch(function() { show(t('toastRequestFailedShort')); });
     }
 
     btnOpenSelectHex.addEventListener('click', openSelectHexModal);
@@ -1461,16 +1468,16 @@
       hexSwitchesEl.innerHTML = '';
       hexIds.forEach(function(hexId) {
         var robot = robots.find(function(r) { return r.id === hexId; });
-        var name = (robot && robot.name) ? robot.name : hexId;
+        var name = getHexDisplayName(hexId, (robot && robot.name) ? robot.name : hexId);
         var running = !!(robot && robot.running);
         var item = document.createElement('div');
         item.className = 'hex-switch-item' + (running ? ' running' : '');
         item.innerHTML =
           '<span class="hex-name">' + escapeHtml(name) + '</span>' +
-          '<span class="hex-status">' + (running ? '运行中' : '已停止') + '</span>' +
+          '<span class="hex-status">' + (running ? t('statusRunning') : t('statusStopped')) + '</span>' +
           (running
-            ? '<button type="button" class="btn-hex-action stop" data-robot="' + escapeHtml(hexId) + '">停止</button>'
-            : '<button type="button" class="btn-hex-action start" data-robot="' + escapeHtml(hexId) + '">启动</button>');
+            ? '<button type="button" class="btn-hex-action stop" data-robot="' + escapeHtml(hexId) + '">' + t('btnStop') + '</button>'
+            : '<button type="button" class="btn-hex-action start" data-robot="' + escapeHtml(hexId) + '">' + t('btnStart') + '</button>');
         var btn = item.querySelector('.btn-hex-action');
         if (btn) {
           btn.addEventListener('click', function() {
@@ -1484,9 +1491,9 @@
               .then(function(list) {
                 robots = list || [];
                 renderHexSwitches();
-                show(btn.classList.contains('stop') ? '已发送停止' : '已发送启动');
+                show(btn.classList.contains('stop') ? t('toastSendStop') : t('toastSendStart'));
               })
-              .catch(function() { show('请求失败'); })
+              .catch(function() { show(t('toastRequestFailedShort')); })
               .then(function() { btn.disabled = false; });
           });
         }
@@ -1516,9 +1523,9 @@
         hexList = robots.filter(function(r) { return r.id !== 'main' && r.id !== 'lan'; });
         renderHexSwitches();
         renderRing();
-        show(action === 'start' ? '已发送一键启动' : '已发送一键停止');
+        show(action === 'start' ? t('toastSendBatchStart') : t('toastSendBatchStop'));
       }).catch(function() {
-        show('请求失败');
+        show(t('toastRequestFailedShort'));
       }).then(function() {
         if (btn) btn.disabled = false;
       });
@@ -1553,7 +1560,7 @@
           '\n\n请提炼出2-5条关键信息，每条格式为："类型|内容"，类型只能是：决策/进展/风险/待办 之一。' +
           '内容不超过50字。只输出列表，不要多余的话。例如：\n决策|采用Python+Whisper方案做字幕\n进展|乾完成字幕生成模块';
         btnUpdateMemory.disabled = true;
-        btnUpdateMemory.textContent = '📝 提炼中…';
+        btnUpdateMemory.textContent = t('extractingMemory');
         fetch('/api/yin/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1578,14 +1585,15 @@
             });
           });
           Promise.all(promises).then(function() {
-            btnUpdateMemory.textContent = '📝 已更新 ' + lines.length + ' 条记忆';
-            setTimeout(function() { btnUpdateMemory.textContent = '📝 更新记忆'; }, 3000);
+            btnUpdateMemory.textContent = t('memoryUpdatedCount', lines.length);
+            setTimeout(function() { btnUpdateMemory.textContent = t('updateMemory'); }, 3000);
           });
         }).catch(function() {
           alert('记忆更新失败，请检查阴是否在线');
+          btnUpdateMemory.textContent = t('updateMemory');
         }).then(function() {
           btnUpdateMemory.disabled = false;
-          if (btnUpdateMemory.textContent === '📝 提炼中…') btnUpdateMemory.textContent = '📝 更新记忆';
+          if (btnUpdateMemory.textContent === t('extractingMemory')) btnUpdateMemory.textContent = t('updateMemory');
         });
       });
     }
@@ -1621,9 +1629,7 @@
       var mode = getHexChatMode();
       document.querySelectorAll('input[name="hexChatMode"]').forEach(function(r) { r.checked = (r.value === mode); });
       var isAgent = mode === 'agent';
-      if (hexChatInput) hexChatInput.placeholder = isAgent
-        ? '输入任务指令，用 @卦名 指定执行的卦（如 @乾 帮我写一首诗存到文件）…'
-        : '输入消息，向本项目各卦发送…';
+      if (hexChatInput) hexChatInput.placeholder = isAgent ? t('dispatchInstructionPlaceholderAgent') : t('inputToHex');
     }
     var HEX_CHAT_ROUNDS_KEY_PREFIX = 'hex_chat_max_rounds_project_';
     function getHexChatMaxRoundsKey() { return projectId ? HEX_CHAT_ROUNDS_KEY_PREFIX + projectId : null; }
@@ -1648,7 +1654,7 @@
       if (hexChatRoundsValue) hexChatRoundsValue.textContent = n;
       if (hexChatRoundsBtn) {
         hexChatRoundsBtn.classList.toggle('disabled', !isDiscuss);
-        hexChatRoundsBtn.title = isDiscuss ? '选择讨论轮数（1=仅首轮，2=首轮+互相看回复，3=再加一轮补充）' : (isAgent ? '执行任务模式不使用轮次' : '群发单聊固定 1 轮');
+        hexChatRoundsBtn.title = isDiscuss ? t('roundsTitle') : (isAgent ? t('roundsNoRounds') : t('roundsFixed1'));
       }
       var roundsWrap = document.getElementById('hexChatRoundsWrap');
       if (roundsWrap) roundsWrap.style.display = isAgent ? 'none' : '';
@@ -1666,11 +1672,11 @@
       var isDiscuss = mode === 'discuss';
       var isAgent = mode === 'agent';
       var n = isDiscuss ? getHexChatMaxRounds() : 1;
-      var participants = (project && project.hexIds && project.hexIds.length) ? project.hexIds.length + ' 卦' : '';
+      var participants = (project && project.hexIds && project.hexIds.length) ? t('hexParticipants', project.hexIds.length) : '';
       if (isAgent) {
-        el.textContent = '⚡ 执行任务模式' + (participants ? ' · ' + participants : '');
+        el.textContent = t('modeAgentLabel') + (participants ? ' · ' + participants : '');
       } else {
-        el.textContent = isDiscuss ? ('群讨论 · ' + n + ' 轮' + (participants ? ' · ' + participants : '')) : ('群发单聊' + (participants ? ' · ' + participants : ''));
+        el.textContent = isDiscuss ? (t('modeDiscussRound', n) + (participants ? ' · ' + participants : '')) : (t('modeSingleLabel') + (participants ? ' · ' + participants : ''));
       }
     }
 
@@ -1689,8 +1695,8 @@
         if (text == null) text = msg.textContent.replace(name, '').replace(/^[单群]\s*/, '').replace(/\s*分享到群聊\s*$/, '').trim();
         var isError = msg.classList.contains('err');
         if (!text) return;
-        var type = name === '你' ? 'user' : (name === '系统' ? 'system' : 'hex');
-        messages.push({ type: type, name: name === '你' ? null : name, message: text, isError: isError, mode: currentMode });
+        var type = (name === '你' || name === t('you')) ? 'user' : (name === '系统' || name === t('systemLabel')) ? 'system' : 'hex';
+        messages.push({ type: type, name: (name === '你' || name === t('you')) ? null : name, message: text, isError: isError, mode: currentMode });
       });
       // 收集摘要卡片
       hexChatMessages.querySelectorAll('.hex-chat-summary-block').forEach(function(block) {
@@ -1800,7 +1806,7 @@
           decisionDiv2.innerHTML = renderYinDecision(parsed2, msg.message || '');
           hexChatMessages.appendChild(decisionDiv2);
         } else {
-          var name = msg.name || (msg.type === 'user' ? '你' : '系统');
+          var name = msg.name || (msg.type === 'user' ? t('you') : t('systemLabel'));
           var msgMode = msg.mode || currentMode;
           appendHexChatMsg(name, msg.message, msg.isError || false, false, msgMode);
         }
@@ -1858,8 +1864,8 @@
       try {
         var stored = localStorage.getItem(key) || '[]';
         var messages = JSON.parse(stored);
-        var type = hexName === '你' ? 'user' : 'hex';
-        messages.push({ type: type, name: hexName === '你' ? null : hexName, message: message, isError: false, mode: 'discuss' });
+        var type = (hexName === '你' || hexName === t('you')) ? 'user' : 'hex';
+        messages.push({ type: type, name: (hexName === '你' || hexName === t('you')) ? null : hexName, message: message, isError: false, mode: 'discuss' });
         localStorage.setItem(key, JSON.stringify(messages));
         if (getHexChatMode() === 'discuss' && hexChatMessages) {
           appendHexChatMsg(hexName, message, false, false, 'discuss');
@@ -2142,7 +2148,7 @@
       div.setAttribute('data-name', hexName);
       div.setAttribute('data-message', reply || '');
       var safeName = escapeHtml(hexName);
-      var isUser = (hexName === '你');
+      var isUser = (hexName === '你' || hexName === t('you'));
       var replyHtml = isError || isUser ? escapeHtml(reply || '').replace(/\n/g, '<br>') : renderMd(reply);
       var modeLabel = mode === 'single' ? '<span class="hex-chat-mode-tag" title="群发单聊">单</span>' : '<span class="hex-chat-mode-tag" title="群讨论">群</span>';
       var shareBtn = mode === 'single' ? ' <span class="hex-chat-share" title="将本条同步到群讨论上下文">分享到群聊</span>' : '';
@@ -2173,10 +2179,10 @@
       var allFailed = replies.length > 0;
       replies.forEach(function(r) {
         if (r.reply) allFailed = false;
-        appendHexChatMsg(r.name, r.reply || r.error || '—', !!r.error);
+        appendHexChatMsg(getHexDisplayName(r.hexId, r.name), r.reply || r.error || '—', !!r.error);
       });
       if (allFailed && replies.length > 0) {
-        appendHexChatMsg('系统', '当前所选卦均无法连接。请在本页「本项目卦象 · 启停」处对需要对话的卦点击「启动」，等待显示为运行中后再发消息。', true, false);
+        appendHexChatMsg(t('systemLabel'), t('hexChatNoConnect'), true, false);
       }
       var successReplies = replies.filter(function(r) { return r.reply; });
       if (enableBroadcast && !allFailed && successReplies.length >= 2) {
@@ -2195,7 +2201,7 @@
             _onHexChatDone(task.replies || [], enableBroadcast, hexIds);
           } else if (task.status === 'error') {
             setHexChatStatus('');
-            appendHexChatMsg('系统', '服务异常：' + (task.error || '未知错误'), true, false);
+            appendHexChatMsg(t('systemLabel'), t('serviceErrorWith', task.error || '未知错误'), true, false);
             hexChatSend.disabled = false;
             _activeTaskId = null;
           } else {
@@ -2232,11 +2238,11 @@
             _activeAgentTasks.delete(taskId);
             if (_activeAgentTaskId === taskId) _activeAgentTaskId = null;
             if (_activeAgentTasks.size === 0) setHexChatStatus('');
-            appendHexChatMsg('系统', '执行任务失败：' + (task.error || '未知错误'), true, false);
+            appendHexChatMsg(t('systemLabel'), t('taskFailedWith', task.error || '未知错误'), true, false);
             if (_activeAgentTasks.size === 0) hexChatSend.disabled = false;
           } else {
             var elapsed = task.createdAt ? Math.round((Date.now() - task.createdAt) / 1000) : 0;
-            setHexChatStatus('⚡ ' + (hexName || '卦') + ' 正在执行任务… (' + elapsed + 's)');
+            setHexChatStatus(t('hexExecTaskElapsed', hexName || '卦', elapsed));
             _activeAgentTaskTimer = setTimeout(function() { _pollAgentTask(taskId, hexName); }, 2000);
           }
         })
@@ -2253,7 +2259,8 @@
       for (var i = 0; i < hexList.length; i++) {
         var h = hexList[i];
         if (hexIds.indexOf(h.id) < 0) continue;
-        if (text.indexOf('@' + h.name) >= 0) result.push(h.id);
+        var dn = getHexDisplayName(h.id, h.name);
+        if (text.indexOf('@' + h.name) >= 0 || text.indexOf('@' + dn) >= 0) result.push(h.id);
       }
       return result;
     }
@@ -2281,7 +2288,7 @@
             var mtime = new Date(f.mtime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
             var dlUrl = '/api/project-files/' + encodeURIComponent(projectId) + '/download?hexId=' + encodeURIComponent(f.hexId) + '&path=' + encodeURIComponent(f.path);
             return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">'
-              + '<span style="color:var(--gold-dim); min-width:28px; text-align:center;">' + escapeHtml(f.hexName) + '</span>'
+              + '<span style="color:var(--gold-dim); min-width:28px; text-align:center;">' + escapeHtml(getHexDisplayName(f.hexId, f.hexName)) + '</span>'
               + '<span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + escapeHtml(f.path) + '">' + escapeHtml(f.name) + '</span>'
               + '<span style="color:var(--text-dim); min-width:44px; text-align:right;">' + size + '</span>'
               + '<span style="color:var(--text-dim); min-width:72px; text-align:right;">' + mtime + '</span>'
@@ -2389,14 +2396,14 @@
     if (dispatchSendBtn) {
       dispatchSendBtn.addEventListener('click', async function() {
         var instruction = dispatchInstruction ? dispatchInstruction.value.trim() : '';
-        if (!instruction) { if (dispatchStatus) dispatchStatus.textContent = '请输入任务指令'; return; }
+        if (!instruction) { if (dispatchStatus) dispatchStatus.textContent = t('dispatchEnterInstruction'); return; }
         var selectedIds = [];
         if (dispatchHexList) {
           dispatchHexList.querySelectorAll('input[type=checkbox]:checked').forEach(function(cb) {
             selectedIds.push(cb.value);
           });
         }
-        if (!selectedIds.length) { if (dispatchStatus) dispatchStatus.textContent = '请至少选一个卦'; return; }
+        if (!selectedIds.length) { if (dispatchStatus) dispatchStatus.textContent = t('selectAtLeastOneHex'); return; }
 
         var ctx = dispatchContext ? dispatchContext.textContent : '';
         var fullMessage = ctx && ctx !== '（当前无讨论记录）'
@@ -2404,13 +2411,13 @@
           : instruction;
 
         dispatchSendBtn.disabled = true;
-        if (dispatchStatus) dispatchStatus.textContent = '派发中…';
+        if (dispatchStatus) dispatchStatus.textContent = t('dispatching');
 
         var results = [];
         for (var i = 0; i < selectedIds.length; i++) {
           var hexId = selectedIds[i];
           var hex = hexList.find(function(h) { return h.id === hexId; });
-          var hexName = hex ? hex.name : hexId;
+          var hexName = getHexDisplayName(hexId, hex ? hex.name : hexId);
           try {
             var resp = await fetch('/api/hex/agent-task', {
               method: 'POST',
@@ -2483,9 +2490,9 @@
           var mentioned = parseMentionedHexNamesFromText(text, hexIds);
           var targetHexId = mentioned.length > 0 ? mentioned[0] : hexIds[0];
           var hex = hexList.find(function(h) { return h.id === targetHexId; }) || { name: targetHexId };
-          appendHexChatMsg('你', '[任务] ' + text, false);
+          appendHexChatMsg(t('you'), '[任务] ' + text, false);
           hexChatSend.disabled = true;
-          setHexChatStatus('⚡ 正在让 ' + hex.name + ' 执行任务（工具模式）…');
+          setHexChatStatus(t('hexChatExecTask', getHexDisplayName(targetHexId, hex.name)));
           fetch('/api/hex/agent-task', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2495,24 +2502,24 @@
             .then(function(data) {
               if (data.error) {
                 setHexChatStatus('');
-                appendHexChatMsg('系统', '执行任务失败：' + data.error, true, false);
+                appendHexChatMsg(t('systemLabel'), t('taskFailedWith', data.error), true, false);
                 hexChatSend.disabled = false;
                 return;
               }
               var agentTaskId = data.taskId;
-              _pollAgentTask(agentTaskId, hex.name);
+              _pollAgentTask(agentTaskId, getHexDisplayName(targetHexId, hex.name));
             })
             .catch(function(e) {
               setHexChatStatus('');
-              appendHexChatMsg('系统', '请求失败：' + (e.message || '网络错误'), true);
+              appendHexChatMsg(t('systemLabel'), t('requestFailedWith', e.message || '网络错误'), true);
               hexChatSend.disabled = false;
             });
           return;
         }
 
-        appendHexChatMsg('你', text, false);
+        appendHexChatMsg(t('you'), text, false);
         hexChatSend.disabled = true;
-        setHexChatStatus('正在向各卦发送…');
+        setHexChatStatus(t('hexChatSending'));
         var history = getHexChatHistory();
         var enableBroadcast = chatModeVal === 'discuss';
         var maxRounds = getHexChatMaxRounds();
@@ -2525,14 +2532,14 @@
           .then(function(r) { return r.json(); })
           .then(function(data) {
             if (data.error) {
-              setHexChatStatus('<span class="st-fail">服务异常：' + escapeHtml(data.error) + '</span>');
-              appendHexChatMsg('系统', '服务异常：' + data.error, true, false);
+              setHexChatStatus('<span class="st-fail">' + escapeHtml(t('serviceErrorWith', data.error)) + '</span>');
+              appendHexChatMsg(t('systemLabel'), t('serviceErrorWith', data.error), true, false);
               hexChatSend.disabled = false;
               return;
             }
             var taskId = data.taskId;
             if (!taskId) {
-              appendHexChatMsg('系统', '未收到任务 ID，请检查服务端日志。', true, false);
+              appendHexChatMsg(t('systemLabel'), t('noTaskId'), true, false);
               hexChatSend.disabled = false;
               return;
             }
@@ -2545,11 +2552,11 @@
           .catch(function(e) {
             setHexChatStatus('');
             var msg = e.message || '网络错误';
-            var hint = '请求失败：' + msg;
+            var hint = t('requestFailedWith', msg);
             if (/load failed|failed to fetch|networkerror|network error/i.test(String(msg)) || msg === 'Load failed') {
-              hint = '无法连接到面板接口。请用浏览器打开：http://localhost:3999/project.html' + (projectId ? '?id=' + projectId : '') + ' ，并确保已启动面板（在 panel-web 目录运行 node server.js 或双击「启动面板」）。若当前是用文件方式打开的页面，请改用上述地址打开。';
+              hint = t('connectPanelHint', 'http://localhost:3999/project.html' + (projectId ? '?id=' + projectId : ''));
             }
-            appendHexChatMsg('系统', hint, true);
+            appendHexChatMsg(t('systemLabel'), hint, true);
             hexChatSend.disabled = false;
           });
       });
@@ -2569,7 +2576,7 @@
         }
         _hexChatRestoring = true;
         if (hexChatSend) hexChatSend.disabled = true;
-        setHexChatStatus('正在等待卦的回复…');
+        setHexChatStatus(t('waitingHexReply'));
         fetch('/api/hex/task/' + savedTask.taskId)
           .then(function(r) { return r.json(); })
           .then(function(task) {
@@ -2585,20 +2592,20 @@
               loadHexChatHistory();
             } else if (task.status === 'running') {
               // 还在跑，恢复轮询
-              setHexChatStatus('正在等待卦的回复…（后台运行中）');
+              setHexChatStatus(t('waitingHexReplyBg'));
               _activeTaskId = savedTask.taskId;
               _activeEnableBroadcast = savedTask.enableBroadcast || false;
               _activeHexIds = savedTask.hexIds || [];
               _pollTask(savedTask.taskId, savedTask.enableBroadcast, savedTask.hexIds);
             } else if (task.status === 'expired') {
               // 服务重启导致任务超时
-              appendHexChatMsg('系统', '上次发送的消息因服务重启而超时，请重新发送。', true, false);
+              appendHexChatMsg(t('systemLabel'), t('hexChatTimeout'), true, false);
               setHexChatStatus('');
               if (hexChatSend) hexChatSend.disabled = false;
             } else {
               // error 或未知状态
               if (task.error) {
-                appendHexChatMsg('系统', '服务异常：' + task.error, true, false);
+                appendHexChatMsg(t('systemLabel'), t('serviceErrorWith', task.error), true, false);
               }
               setHexChatStatus('');
               if (hexChatSend) hexChatSend.disabled = false;
@@ -2690,27 +2697,27 @@
       var btnDiscuss = document.getElementById('hexChatClearDiscuss');
       var btnAll = document.getElementById('hexChatClearAll');
       if (btnSingle) btnSingle.addEventListener('click', function() {
-        showClearConfirmModal('确定清空单聊与卦对话记录？').then(function(r) {
+        showClearConfirmModal(t('confirmClearSingle')).then(function(r) {
           if (!r.confirmed) return;
           clearHexChatHistoryByMode('single');
           if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
-          show('已清空单聊记录' + (r.clearMemory ? '及本项目记忆' : ''));
+          show(t('toastClearedSingle') + (r.clearMemory ? t('andMemory') : ''));
         });
       });
       if (btnDiscuss) btnDiscuss.addEventListener('click', function() {
-        showClearConfirmModal('确定清空群聊与卦对话记录？').then(function(r) {
+        showClearConfirmModal(t('confirmClearDiscuss')).then(function(r) {
           if (!r.confirmed) return;
           clearHexChatHistoryByMode('discuss');
           if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
-          show('已清空群聊记录' + (r.clearMemory ? '及本项目记忆' : ''));
+          show(t('toastClearedDiscuss') + (r.clearMemory ? t('andMemory') : ''));
         });
       });
       if (btnAll) btnAll.addEventListener('click', function() {
-        showClearConfirmModal('确定清空全部与卦对话记录？').then(function(r) {
+        showClearConfirmModal(t('confirmClearAllHex')).then(function(r) {
           if (!r.confirmed) return;
           clearHexChatHistoryByMode('all');
           if (r.clearMemory && projectId) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
-          show('已清空全部记录' + (r.clearMemory ? '及本项目记忆' : ''));
+          show(t('toastClearedAll') + (r.clearMemory ? t('andMemory') : ''));
         });
       });
       window.showClearConfirmModal = showClearConfirmModal;
@@ -2835,7 +2842,7 @@
       if (hint) hint.remove();
       var div = document.createElement('div');
       div.className = 'yin-chat-msg ' + role;
-      var who = role === 'user' ? '我' : '阴';
+      var who = role === 'user' ? t('me') : t('yinLabel');
       var textHtml = role === 'user' ? escapeHtml(text) : ('<span class="yin-chat-md">' + (typeof marked !== 'undefined' ? marked.parse(String(text || ''), { breaks: true, gfm: true }) : escapeHtml(text)) + '</span>');
       div.innerHTML = '<span class="who">' + escapeHtml(who) + '</span>' + textHtml;
       yinChatMessages.appendChild(div);
@@ -2861,7 +2868,7 @@
             }
             if (task.status === 'error') {
               try { sessionStorage.removeItem(YIN_TASK_KEY); } catch (e) {}
-              appendYinChatMsg('yin', '（' + (task.error || '暂时无法收到阴的回复') + '）');
+              appendYinChatMsg('yin', task.error ? t('yinNoReplyWith', task.error) : '（' + t('yinNoReply') + '）');
               yinChatSend.disabled = false;
               return;
             }
@@ -2887,7 +2894,7 @@
             var taskId = data && data.taskId;
             if (!taskId) {
               var err = (data && data.error) ? data.error : '未返回 taskId';
-              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + err + '）');
+              appendYinChatMsg('yin', t('yinNoReplyWith', err));
               yinChatSend.disabled = false;
               return;
             }
@@ -2895,7 +2902,7 @@
             pollYinTask(taskId);
           })
           .catch(function(e) {
-            appendYinChatMsg('yin', '（请求失败：' + (e.message || '网络错误') + '）');
+            appendYinChatMsg('yin', '（' + t('requestFailedWith', e.message || '网络错误') + '）');
             yinChatSend.disabled = false;
           });
       });
@@ -2907,7 +2914,7 @@
           var savedTaskId = sessionStorage.getItem(YIN_TASK_KEY);
           if (!savedTaskId) return;
           yinChatSend.disabled = true;
-          show('等待阴回复中…（换页不中断）');
+          show(t('waitingYinReply'));
           pollYinTask(savedTaskId);
         } catch (e) {}
       })();
@@ -2921,7 +2928,7 @@
       yinChatClearBtn.addEventListener('click', function() {
         var fn = window.showClearConfirmModal;
         if (!fn) return;
-        fn('确定清空与阴的全部聊天记录？').then(function(r) {
+        fn(t('confirmClearYinChat')).then(function(r) {
           if (!r.confirmed) return;
           _yinChatCache = [];
           if (yinChatMessages) { yinChatMessages.innerHTML = ''; appendYinChatEmptyHint(); }
@@ -2931,7 +2938,7 @@
               .catch(function(e) { console.warn('清空阴历史失败:', e); });
             if (r.clearMemory) fetch('/api/project-memory/' + encodeURIComponent(projectId), { method: 'DELETE' }).catch(function() {});
           }
-          show('已清空与阴的聊天记录' + (r.clearMemory ? '及本项目记忆' : ''));
+          show(t('toastClearedYin') + (r.clearMemory ? t('andMemory') : ''));
         });
       });
     }
@@ -2939,7 +2946,7 @@
     function load() {
       if (!projectId) {
         nameEl.textContent = '未指定项目';
-        show('请从项目列表进入');
+        show(t('pleaseEnterFromProjects'));
         return;
       }
       Promise.all([
@@ -2952,10 +2959,11 @@
         project = results[0];
         robots = results[1] || [];
         hexList = robots.filter(function(r) { return r.id !== 'main' && r.id !== 'lan'; });
-        document.title = project.name + ' · 项目';
-        nameEl.textContent = project.name;
+        var displayName = (project.id === 'hex-definition') ? t('hexDefinitionName') : project.name;
+        document.title = displayName + ' · ' + (document.body.getAttribute('data-i18n-title') ? (window.YINOVA_I18N ? window.YINOVA_I18N.t('projectTitle') : '项目') : '项目');
+        nameEl.textContent = displayName;
         breadcrumbSep.style.display = 'inline';
-        breadcrumbProject.textContent = project.name;
+        breadcrumbProject.textContent = displayName;
         renderRing();
         renderHexSwitches();
         var hasHex = (project.hexIds && project.hexIds.length) > 0;
@@ -3028,9 +3036,9 @@
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击停止';
+          btn.title = btn.dataset.robot === 'main' ? t('yinClickMainStop') : t('yangClickStop');
         } else {
-          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击启动';
+          btn.title = btn.dataset.robot === 'main' ? t('yinClickMainStart') : t('yangClickStart');
         }
       });
     }
@@ -3053,14 +3061,14 @@
               const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
               const data = await r.json().catch(function() { return {}; });
               if (r.ok && !data.error) {
-                show('已停止');
+                show(t('toastStopped'));
                 const next = await fetch('/api/robots').then(function(r) { return r.json(); }).catch(function() { return []; });
                 updateYinyangState(next);
               } else {
-                show(data.error || '停止失败');
+                show(data.error || t('toastStopFailed'));
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailedShort') + ': ' + (e.message || ''));
             }
             newBtn.disabled = false;
           } else {
@@ -3070,13 +3078,13 @@
               const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
               const data = await r.json().catch(function() { return {}; });
               if (r.ok && !data.error) {
-                show('已弹出终端');
+                show(t('toastTerminalOpened'));
               } else {
-                show(data.error || '启动失败 (HTTP ' + r.status + ')');
+                show(data.error || t('toastStartFailed') + ' (HTTP ' + r.status + ')');
                 newBtn.classList.remove('starting');
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailedShort') + ': ' + (e.message || ''));
               newBtn.classList.remove('starting');
             }
           }
@@ -3086,6 +3094,22 @@
 
     // 初始化时更新阴阳状态
     fetch('/api/robots').then(function(r) { return r.json(); }).then(updateYinyangState).catch(function() {});
+
+    window.YINOVA_APPLY_I18N_EXTRAS = function() {
+      if (typeof updateYinyangState === 'function') {
+        fetch('/api/robots').then(function(r) { return r.json(); }).then(updateYinyangState).catch(function() {});
+      }
+      if (typeof renderHexSwitches === 'function' && hexSwitchesEl) renderHexSwitches();
+      if (typeof renderRing === 'function' && ringEl) renderRing();
+      if (typeof renderSelectHexGrid === 'function' && selectHexGrid) renderSelectHexGrid();
+      if (typeof updateHexChatStateLabel === 'function') updateHexChatStateLabel();
+      if (nameEl && project) nameEl.textContent = (project.id === 'hex-definition') ? t('hexDefinitionName') : (project.name || t('loading'));
+      var msgs = document.querySelectorAll('.yin-chat-msg');
+      msgs.forEach(function(m) {
+        var who = m.querySelector('.who');
+        if (who) who.textContent = m.classList.contains('user') ? t('me') : t('yinLabel');
+      });
+    };
 
     load();
   </script>

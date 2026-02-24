@@ -182,49 +182,53 @@
     .msg.err { background: rgba(220, 80, 80, 0.2); border: 1px solid rgba(220, 80, 80, 0.5); color: #e57373; }
   </style>
 </head>
-<body>
+<body data-i18n-title="configTitle">
   <div id="starfield" aria-hidden="true"></div>
   <div class="page-content">
-    <h1>首次配置</h1>
-    <p class="sub">选择模型提供商并填写 API Key，即可启用 Yinova 全部功能</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h1 data-i18n="configFirst" style="margin:0;">首次配置</h1>
+      <span id="yinova-lang-toggle-wrap"></span>
+    </div>
+    <p class="sub" data-i18n="configSub">选择模型提供商并填写 API Key，即可启用 Yinova 全部功能</p>
     <div class="form-card">
       <form id="configForm">
         <div class="form-row">
-          <label for="provider">模型提供商</label>
+          <label for="provider" data-i18n="modelProvider">模型提供商</label>
           <select id="provider" class="form-select"></select>
         </div>
         <div class="form-row">
-          <label for="modelPrimary">主模型</label>
+          <label for="modelPrimary" data-i18n="modelPrimary">主模型</label>
           <select id="modelPrimary" class="form-select"></select>
         </div>
         <div class="form-row" id="apiKeyRow">
-          <label for="apiKey" id="apiKeyLabel">API Key（必填）</label>
-          <input type="password" id="apiKey" name="apiKey" placeholder="sk-..." autocomplete="off" />
-          <p class="hint" id="apiKeyHint">从对应提供商控制台获取 API Key</p>
+          <label for="apiKey" id="apiKeyLabel" data-i18n="apiKeyRequired">API Key（必填）</label>
+          <input type="password" id="apiKey" name="apiKey" data-i18n-placeholder="apiKeyPlaceholder" placeholder="sk-..." autocomplete="off" />
+          <p class="hint" id="apiKeyHint" data-i18n="apiKeyHint">从对应提供商控制台获取 API Key</p>
         </div>
         <div class="form-row">
-          <label for="portMain">主网关端口</label>
+          <label for="portMain" data-i18n="portMain">主网关端口</label>
           <input type="number" id="portMain" name="portMain" value="18789" min="1024" max="65535" />
         </div>
         <div class="form-row">
-          <label for="portHexStart">六十四卦起始端口</label>
+          <label for="portHexStart" data-i18n="portHexLabel">六十四卦起始端口</label>
           <input type="number" id="portHexStart" name="portHexStart" value="18791" min="1024" max="65535" />
         </div>
         <div class="form-row">
-          <label for="panelPort">面板端口</label>
+          <label for="panelPort" data-i18n="panelPort">面板端口</label>
           <input type="number" id="panelPort" name="panelPort" value="3999" min="1024" max="65535" />
         </div>
         <div class="form-row" style="margin-top:12px;">
-          <button type="button" class="btn-check-ports" id="btnCheckPorts">检测端口占用</button>
+          <button type="button" class="btn-check-ports" id="btnCheckPorts" data-i18n="btnCheckPorts">检测端口占用</button>
           <div id="portResult" class="port-result"></div>
         </div>
-        <button type="submit" class="btn-save" id="btnSave">保存配置</button>
+        <button type="submit" class="btn-save" id="btnSave" data-i18n="btnSaveConfig">保存配置</button>
       </form>
       <div id="msg"></div>
     </div>
-    <a href="index.html" class="link-skip">已配置？返回主面板</a>
+    <a href="index.html" class="link-skip" data-i18n="linkBackPanel">已配置？返回主面板</a>
   </div>
 
+  <script src="i18n.js"></script>
   <script>
     (function initStarfield() {
       var container = document.getElementById('starfield');
@@ -242,6 +246,7 @@
       }
     })();
 
+    var t = window.YINOVA_I18N && window.YINOVA_I18N.t ? window.YINOVA_I18N.t.bind(window.YINOVA_I18N) : function(k) { return k; };
     var msgEl = document.getElementById('msg');
     function showMsg(text, isErr) {
       msgEl.textContent = text;
@@ -284,7 +289,7 @@
       }
       fillProviderSelect();
       if (c.apiKey) {
-        document.getElementById('apiKey').placeholder = '已配置（留空则不修改）';
+        document.getElementById('apiKey').placeholder = t('configuredPlaceholder');
         hasExistingKey = true;
       }
       if (c.provider && providersData[c.provider]) {
@@ -310,17 +315,21 @@
     function updateProviderUI(providerId) {
       var p = providersData[providerId] || { label: providerId, url: '#' };
       var needKey = p.envKey && p.envKey.length > 0;
-      document.getElementById('apiKeyLabel').textContent = needKey ? (p.label + ' API Key（必填）') : (p.label + '（本地无需 Key）');
-      document.getElementById('apiKeyHint').innerHTML = needKey
-        ? ('从 <a href="' + (p.url || '#') + '" target="_blank" rel="noopener" style="color:var(--gold-dim)">' + (p.label || providerId) + '</a> 控制台获取')
-        : '本地运行，无需配置 API Key';
+      var label = p.label || providerId;
+      document.getElementById('apiKeyLabel').textContent = needKey ? t('apiKeyLabelWithProvider', label) : (label + ' ' + t('localNoKey'));
+      var hintStr = needKey ? t('apiKeyHintGetFrom', label) : t('localNoKeyHint');
+      if (needKey) {
+        var link = '<a href="' + (p.url || '#') + '" target="_blank" rel="noopener" style="color:var(--gold-dim)">' + label + '</a>';
+        hintStr = hintStr.replace(label, link);
+      }
+      document.getElementById('apiKeyHint').innerHTML = hintStr;
       document.getElementById('apiKeyRow').style.display = needKey ? 'block' : 'none';
     }
 
     function fillModelOptions(providerId) {
       var sel = document.getElementById('modelPrimary');
       var p = providersData[providerId] || providersData.zai;
-      var models = (p && p.models) || [{ id: providerId + '/default', name: '默认' }];
+      var models = (p && p.models) || [{ id: providerId + '/default', name: t('defaultModel') }];
       sel.innerHTML = models.map(function(m) {
         return '<option value="' + m.id + '">' + m.name + '</option>';
       }).join('');
@@ -332,20 +341,20 @@
       var portHexStart = parseInt(document.getElementById('portHexStart').value, 10) || 18791;
       var panelPort = parseInt(document.getElementById('panelPort').value, 10) || 3999;
       btn.disabled = true;
-      document.getElementById('portResult').innerHTML = '检测中…';
+      document.getElementById('portResult').innerHTML = t('checking');
       fetch('/api/config/check-ports?portMain=' + portMain + '&portHexStart=' + portHexStart + '&panelPort=' + panelPort)
         .then(function(r) { return r.json(); })
         .then(function(data) {
           var html = [];
           ['portMain','portHexStart','panelPort'].forEach(function(k) {
             var d = data[k];
-            var label = k === 'portMain' ? '主网关' : k === 'portHexStart' ? '卦起始' : '面板';
-            html.push('<span class="' + (d.inUse ? 'used' : 'free') + '">' + label + ' ' + d.port + ': ' + (d.inUse ? '已占用' : '空闲') + '</span>');
+            var label = k === 'portMain' ? t('portMainLabel') : k === 'portHexStart' ? t('portHexLabelShort') : t('portPanelLabel');
+            html.push('<span class="' + (d.inUse ? 'used' : 'free') + '">' + label + ' ' + d.port + ': ' + (d.inUse ? t('portUsed') : t('portFree')) + '</span>');
           });
           document.getElementById('portResult').innerHTML = html.join(' &nbsp;|&nbsp; ');
         })
         .catch(function() {
-          document.getElementById('portResult').innerHTML = '<span class="used">检测失败</span>';
+          document.getElementById('portResult').innerHTML = '<span class="used">' + t('checkFailed') + '</span>';
         })
         .finally(function() { btn.disabled = false; });
     });
@@ -356,7 +365,7 @@
       var prov = providersData[document.getElementById('provider').value] || {};
       var needKey = prov.envKey && prov.envKey.length > 0;
       if (!apiKey && !hasExistingKey && needKey) {
-        showMsg('请填写 API Key', true);
+        showMsg(t('fillApiKey'), true);
         return;
       }
       var btn = document.getElementById('btnSave');
@@ -377,18 +386,23 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.ok) {
-          showMsg('配置已保存。阴与64卦已更新 API Key。若阴/卦正在运行，请重启后生效。', false);
+          showMsg(t('configSaved'), false);
           document.getElementById('apiKey').value = '';
-          document.getElementById('apiKey').placeholder = '已配置';
+          document.getElementById('apiKey').placeholder = t('configured');
         } else {
-          showMsg(data.error || '保存失败', true);
+          showMsg(data.error || t('saveFailed'), true);
         }
       })
       .catch(function() {
-        showMsg('请求失败，请检查面板服务是否正常', true);
+        showMsg(t('requestFailed'), true);
       })
       .finally(function() { btn.disabled = false; });
     });
+
+    window.YINOVA_APPLY_I18N_EXTRAS = function() {
+      var prov = document.getElementById('provider');
+      if (prov && prov.value) updateProviderUI(prov.value);
+    };
   </script>
 </body>
 </html>

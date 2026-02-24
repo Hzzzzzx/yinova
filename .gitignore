@@ -141,6 +141,10 @@ panel-web/projects.db*
 docs/
 网吧测试清单.md
 
+# 内部/上架规划文档（含绝对路径，不提交）
+PRE_RELEASE_*.md
+GITHUB_*.md
+
 # 系统
 .DS_Store
 *.swp

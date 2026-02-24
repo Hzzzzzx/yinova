@@ -12,6 +12,11 @@ HEX_NAMES=(乾 坤 泰 否 谦 豫 随 蛊 临 观 屯 蒙 需 讼 师 比 小�
 echo "=== Yinova 安装 ==="
 echo "项目目录: $ROOT"
 
+# 确保关键脚本可执行（clone 后可能丢失权限）
+chmod +x "$ROOT/install.sh" "$ROOT/启动面板.sh" "$ROOT/启动面板.command" 2>/dev/null || true
+chmod +x "$ROOT/start-worker.sh" "$ROOT/stop-worker.sh" 2>/dev/null || true
+[[ -f "$ROOT/阴/启动阴.sh" ]] && chmod +x "$ROOT/阴/启动阴.sh" 2>/dev/null || true
+
 # 移除根目录下的旧卦目录（现已改用 hexes/）
 removed=0
 for name in "${HEX_NAMES[@]}"; do
@@ -106,9 +111,29 @@ if [[ -f "$YIN_CONF" ]]; then
   if [[ "$(uname)" == "Darwin" ]]; then
     sed -i '' "s|__YINOVA_ROOT__|$ROOT|g" "$YIN_CONF"
     sed -i '' "s|yinova_local_replace_me|$GATEWAY_TOKEN|g" "$YIN_CONF"
+    sed -i '' "s|replace_with_random_secret_token|$GATEWAY_TOKEN|g" "$YIN_CONF"
   else
     sed -i "s|__YINOVA_ROOT__|$ROOT|g" "$YIN_CONF"
     sed -i "s|yinova_local_replace_me|$GATEWAY_TOKEN|g" "$YIN_CONF"
+    sed -i "s|replace_with_random_secret_token|$GATEWAY_TOKEN|g" "$YIN_CONF"
+  fi
+  # 修正 workspace 路径（复制项目后可能指向旧目录）
+  YIN_WORKSPACE="$ROOT/阴/workspace"
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+      const fs=require("fs");
+      const confPath=process.argv[1];
+      const wantWorkspace=process.argv[2];
+      if(!confPath||!wantWorkspace) process.exit(0);
+      let j;
+      try { j=JSON.parse(fs.readFileSync(confPath,"utf8")); } catch(e){ process.exit(0); }
+      const ws=j.agents&&j.agents.defaults&&j.agents.defaults.workspace;
+      if(ws&&ws!==wantWorkspace) {
+        j.agents.defaults.workspace=wantWorkspace;
+        fs.writeFileSync(confPath,JSON.stringify(j,null,2),"utf8");
+        console.log("已修正 阴 workspace 路径");
+      }
+    ' "$YIN_CONF" "$YIN_WORKSPACE" 2>/dev/null || true
   fi
   echo "已配置 阴/moltbot.json"
 fi

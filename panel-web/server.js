@@ -175,6 +175,7 @@ const ID_FILE = (robot) => path.join(__dirname, '.panel-window-' + robot);
 
 // 状态检测逻辑：只看「网关端口是否在监听」——某卦 running = 该卦在 workers.conf 中的端口有进程 LISTEN
 // 数据来源：lsof -iTCP -sTCP:LISTEN -P -n，解析出 18789/18790/18791～18854 中哪些在监听
+// 注意：未通过面板点击启动也可能显示 running（例如上次残留的 gateway 进程仍占端口），用户可点「停止」或「一键关闭所有终端」释放
 const PANEL_PORTS = new Set([
   18789,
   ...Array.from({ length: 64 }, (_, i) => 18791 + i),
@@ -1737,6 +1738,40 @@ app.get('/api/yin/status', (_req, res) => {
   res.json({ configured: true, source: 'gateway', port: MAIN_GATEWAY_PORT });
 });
 
+// 检测阴网关 API 是否正常（返回 JSON 而非 HTML）
+app.get('/api/yin/gateway/health', async (_req, res) => {
+  const result = { port: MAIN_GATEWAY_PORT, ok: false, error: null };
+  try {
+    if (!isPortInUse(MAIN_GATEWAY_PORT)) {
+      result.error = '阴网关未启动（端口 ' + MAIN_GATEWAY_PORT + ' 未监听）。请点击「阴·启动」。';
+      return res.json(result);
+    }
+    const headers = { 'Content-Type': 'application/json' };
+    const token = getMainGatewayToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch(`${MAIN_GATEWAY_HTTP}/v1/chat/completions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ model: 'openclaw', messages: [{ role: 'user', content: 'ping' }] }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    const body = await r.text();
+    if (body.trim().startsWith('<') || body.includes('<!DOCTYPE') || body.includes('<html')) {
+      result.error = '阴网关返回了网页而非 JSON。请确认 gateway.http.endpoints.chatCompletions.enabled = true，并重启阴网关。';
+    } else if (r.ok) {
+      result.ok = true;
+    } else {
+      result.error = 'HTTP ' + r.status + ': ' + (body.slice(0, 150) || '');
+    }
+  } catch (e) {
+    result.error = e.message || '连接失败';
+  }
+  res.json(result);
+});
+
 // 与阴对话改为「先返回 taskId + 后台请求」，换页不中断，前端轮询取结果
 const yinTaskStore = new Map();
 app.get('/api/yin/task/:taskId', (req, res) => {
@@ -1744,6 +1779,24 @@ app.get('/api/yin/task/:taskId', (req, res) => {
   if (!task) return res.status(404).json({ error: 'task not found' });
   res.json(task);
 });
+
+// 读取项目卦群讨论记录，供阴监控群聊
+function readHexDiscussForYin(projectId, maxMessages = 30, maxContentLen = 800) {
+  try {
+    const filePath = getChatHistoryPath(projectId, 'discuss');
+    if (!fs.existsSync(filePath)) return '';
+    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const list = Array.isArray(data) ? data : (data && Array.isArray(data.messages) ? data.messages : []);
+    const recent = list.slice(-maxMessages);
+    if (recent.length === 0) return '';
+    const lines = recent.map((m) => {
+      const name = m.type === 'user' ? '用户' : (m.name || '卦');
+      const content = String(m.message || '').slice(0, maxContentLen);
+      return content ? `${name}：${content}` : null;
+    }).filter(Boolean);
+    return lines.length > 0 ? `【项目卦群最近讨论（供你监控决策）】\n${lines.join('\n\n')}` : '';
+  } catch (e) { return ''; }
+}
 
 function buildYinMessages(projectId, history, text) {
   const messages = [];
@@ -1769,6 +1822,10 @@ function buildYinMessages(projectId, history, text) {
           const recent = mem.entries.slice(-20);
           const memLines = recent.map(e => `- ${e.date} [${e.type || '备注'}] ${String(e.content || '').slice(0, 200)}`).filter(Boolean);
           if (memLines.length > 0) systemContent += `\n\n项目记忆（最近${memLines.length}条）：\n` + memLines.join('\n');
+        }
+        const discussContent = readHexDiscussForYin(projectId);
+        if (discussContent) {
+          systemContent += `\n\n${discussContent}\n\n你可以基于以上卦群讨论内容回答用户关于「群里在聊什么」「讨论进展如何」等问题，并在用户请求时给出结构化决策意见。`;
         }
         messages.push({ role: 'system', content: systemContent });
       }
@@ -1814,6 +1871,16 @@ app.post('/api/yin/chat', (req, res) => {
   yinTaskStore.set(taskId, task);
   res.json({ taskId });
   (async () => {
+    // 若阴网关未启动，则在后台自动拉起，再尝试调用 HTTP chat 接口，避免每次都要求用户手动点「阴·启动」
+    try {
+      if (!isPortInUse(MAIN_GATEWAY_PORT)) {
+        startMainGatewayInBackground();
+        for (let i = 0; i < 10; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          if (isPortInUse(MAIN_GATEWAY_PORT)) break;
+        }
+      }
+    } catch (_) {}
     const headers = { 'Content-Type': 'application/json' };
     const token = getMainGatewayToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -1824,7 +1891,24 @@ app.post('/api/yin/chat', (req, res) => {
         headers,
         body: JSON.stringify({ model: 'openclaw', messages }),
       });
-      const data = await response.json().catch(() => ({}));
+      const rawBody = await response.text();
+      let data = {};
+      try {
+        if (rawBody.trim().startsWith('<') || rawBody.includes('<!DOCTYPE') || rawBody.includes('<html')) {
+          task.error = '阴网关返回了网页而非 JSON。可能原因：1) 访问了错误路径（正确为 POST /v1/chat/completions）；2) 阴网关未启用 HTTP chatCompletions；3) 阴网关未正确启动。请确认 阴/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true，并先点击「阴·启动」。';
+          task.status = 'error';
+          return;
+        }
+        data = JSON.parse(rawBody);
+      } catch (_) {
+        if (rawBody.length > 200) {
+          task.error = '阴网关返回了非 JSON 格式。请确认阴网关已正确启动（点击阴·启动），且 阴/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true。';
+        } else {
+          task.error = '阴网关响应异常：' + (rawBody.slice(0, 100) || '空响应');
+        }
+        task.status = 'error';
+        return;
+      }
       if (!response.ok) {
         const errMsg = data.error?.message || data.message || `HTTP ${response.status}`;
         if (response.status === 404 || response.status === 405) {
@@ -2800,17 +2884,22 @@ app.post('/api/close-all-hex-terminals', async (req, res) => {
       } catch (_) {}
     });
 
-    // 步骤1：一次性 kill 所有卦端口的 gateway 进程（lsof 端口范围 18791-18854）
+    // 步骤1：按端口逐个 kill 卦网关（macOS 上 lsof 端口范围语法不可靠，逐端口更稳）
     try {
-      const pids = execSync(
-        'lsof -iTCP:18791-18854 -sTCP:LISTEN -P -n -t 2>/dev/null || true',
-        { encoding: 'utf8', stdio: 'pipe' }
-      ).trim();
-      if (pids) {
-        pids.split('\n').forEach((pid) => {
-          const p = parseInt(pid.trim(), 10);
-          if (p > 0) try { process.kill(p, 'SIGKILL'); } catch (_) {}
-        });
+      const hexPorts = Array.from({ length: 64 }, (_, i) => 18791 + i);
+      for (const port of hexPorts) {
+        try {
+          const pids = execSync(
+            'lsof -iTCP:' + port + ' -sTCP:LISTEN -P -n -t 2>/dev/null || true',
+            { encoding: 'utf8', stdio: 'pipe' }
+          ).trim();
+          if (pids) {
+            pids.split(/\s+/).forEach((pid) => {
+              const p = parseInt(pid.trim(), 10);
+              if (p > 0) try { process.kill(p, 'SIGKILL'); } catch (_) {}
+            });
+          }
+        } catch (_) {}
       }
     } catch (_) {}
 
@@ -2835,14 +2924,25 @@ app.post('/api/close-all-hex-terminals', async (req, res) => {
   }
 });
 
-// 精准停止：阴 / 指定卦（关网关进程 + 若有则关对应终端窗口）
+// 精准停止：阴 / 指定卦（先杀网关和该窗口内 TUI，再关窗，避免弹「是否终止进程」）
 const PORT_MAIN = 18789;
 app.post('/api/stop/:robot', async (req, res) => {
   try {
     const robot = req.params.robot;
     if (robot === 'main') {
-      stopAndCloseTerminal('main');
+      // 1. 先查出占用 18789 的所有 PID（网关 + 连到该端口的 TUI），一并 kill，再关窗，避免弹「是否终止进程」
+      try {
+        const pids = execSync(
+          'lsof -iTCP:' + PORT_MAIN + ' -t 2>/dev/null || true',
+          { encoding: 'utf8', stdio: 'pipe' }
+        ).trim();
+        if (pids) pids.split(/\s+/).forEach((pid) => {
+          const p = parseInt(pid.trim(), 10);
+          if (p > 0) try { process.kill(p, 'SIGKILL'); } catch (_) {}
+        });
+      } catch (_) {}
       spawnSync('bash', [STOP_WORKER_SH, '--port', String(PORT_MAIN)], { cwd: ROOT_DIR, encoding: 'utf8' });
+      stopAndCloseTerminal('main');
       _portsCache = null; _portsCacheTime = 0;
       return res.json({ ok: true });
     }
@@ -2854,15 +2954,15 @@ app.post('/api/stop/:robot', async (req, res) => {
       console.log('[stop] robot=%s port=%s', robot, port);
       // 1. kill gateway 进程（端口）
       spawnSync('bash', [STOP_WORKER_SH, '--port', String(port)], { cwd: ROOT_DIR, encoding: 'utf8', maxBuffer: 1024 * 1024 });
-      // 2. kill 对应的 openclaw-tui 进程（让 Terminal 窗口无活跃进程，关窗不弹确认框）
+      // 2. kill 所有关联到该端口的 openclaw 进程（网关 + TUI 客户端），保证终端内无活跃进程
       try {
-        const tuiPids = execSync(
-          `ps aux | grep -E "openclaw.*${port}" | grep -v grep | awk '{print $2}'`,
+        const pids = execSync(
+          'lsof -iTCP:' + port + ' -t 2>/dev/null || true',
           { encoding: 'utf8', stdio: 'pipe' }
         ).trim();
-        if (tuiPids) tuiPids.split('\n').forEach((p) => {
-          const pid = parseInt(p.trim(), 10);
-          if (pid > 0) try { process.kill(pid, 'SIGKILL'); } catch (_) {}
+        if (pids) pids.split(/\s+/).forEach((pid) => {
+          const p = parseInt(pid.trim(), 10);
+          if (p > 0) try { process.kill(p, 'SIGKILL'); } catch (_) {}
         });
       } catch (_) {}
       // 3. 关闭终端窗口（非阻塞，此时进程已死不弹框）
@@ -2885,14 +2985,22 @@ app.use((_req, res) => {
 });
 
 const PORT = Number(process.env.PANEL_WEB_PORT) || 3999;
-try { syncGatewayPortFromWorkersConf(); } catch (_) {}
-try { syncDisableBrowserInMoltbot(); } catch (_) {}
+
+// 启动前检查：workers.conf 缺失时提示运行 install.sh
+if (!fs.existsSync(WORKERS_CONF)) {
+  console.warn('\n  [提示] workers.conf 不存在，卦启动功能将不可用。请先执行: ./install.sh\n');
+} else {
+  try { syncGatewayPortFromWorkersConf(); } catch (_) {}
+  try { syncDisableBrowserInMoltbot(); } catch (_) {}
+}
+
 const server = app.listen(PORT, () => {
   console.log(`\n  Yinova 面板已启动 → http://localhost:${PORT}\n`);
 });
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`端口 ${PORT} 已被占用。可先执行: kill -9 $(lsof -ti :${PORT}) 再重新启动面板。`);
+    console.error(`\n端口 ${PORT} 已被占用。可先执行: kill -9 $(lsof -ti :${PORT}) 再重新启动面板。\n`);
+    process.exit(1);
   }
   throw err;
 });

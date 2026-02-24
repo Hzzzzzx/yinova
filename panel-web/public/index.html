@@ -6,7 +6,7 @@
   <title>Yinova · 六十四卦控制面板</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
   <style>
     :root {
       --black: #000000;
@@ -64,18 +64,23 @@
     .header {
       margin-bottom: 20px;
       width: 100%;
-      max-width: 640px;
+      align-self: stretch;
     }
     .header-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      position: relative;
+      width: 100%;
     }
-    .header-center {
-      text-align: center;
-      flex: 1;
+    .header-left { flex-shrink: 0; }
+    .header-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
     }
+    .header-buttons { display: flex; gap: 8px; align-items: center; }
     .header h1 {
       font-size: 1.5rem;
       font-weight: 700;
@@ -83,31 +88,6 @@
       color: var(--gold);
       letter-spacing: 0.2em;
     }
-    .header .sub {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      letter-spacing: 0.35em;
-    }
-    .yin-status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin: 4px 0 0;
-      letter-spacing: 0.05em;
-    }
-    .yin-status-dot {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #555;
-      transition: background 0.4s;
-    }
-    .yin-status-dot.online { background: #4caf82; box-shadow: 0 0 6px #4caf82aa; animation: status-dot-breathe 2s ease-in-out infinite; }
-    .yin-status-dot.offline { background: #e05a5a; box-shadow: none; }
     .btn-header-project {
       display: flex;
       align-items: center;
@@ -129,13 +109,12 @@
     }
     .monitor {
       width: 100%;
-      max-width: 480px;
-      margin-bottom: 28px;
-      padding: 14px 20px;
+      max-width: 240px;
+      padding: 8px 12px;
       border-radius: 4px;
       background: var(--black-light);
       border: 1px solid var(--border);
-      font-size: 0.8rem;
+      font-size: 0.72rem;
       box-shadow: 0 0 24px rgba(0,0,0,0.3);
       transition: box-shadow 0.15s, border-color 0.15s;
     }
@@ -151,23 +130,48 @@
       87%, 89%, 91%, 93%, 95% { box-shadow: 0 0 0 2px rgba(220,50,50,0.95), 0 0 20px rgba(220,50,50,0.4); border-color: rgba(220,50,50,0.9); }
       97%, 100% { box-shadow: 0 0 24px rgba(0,0,0,0.3); border-color: var(--border); }
     }
+    .monitor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .monitor-header:hover { opacity: 0.9; }
     .monitor h3 {
-      margin: 0 0 10px 0;
-      font-size: 0.8rem;
+      margin: 0;
+      font-size: 0.72rem;
       color: var(--gold-dim);
       font-weight: 500;
       letter-spacing: 0.1em;
     }
+    .monitor-toggle {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--gold-dim);
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .monitor-toggle:hover { color: var(--gold); background: rgba(201,162,39,0.1); }
+    .monitor-body { transition: opacity 0.2s; }
+    .monitor.monitor--collapsed .monitor-body { display: none; }
     .monitor p.desc {
-      margin: 0 0 10px 0;
+      margin: 0 0 6px 0;
       color: var(--text-dim);
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       line-height: 1.4;
     }
-    .monitor-row { display: flex; justify-content: space-between; margin: 5px 0; }
+    .monitor-row { display: flex; justify-content: space-between; margin: 2px 0; }
     .monitor .warn { color: var(--gold); }
     .monitor .danger { color: var(--gold); font-weight: 600; }
-    .monitor .warnings { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .monitor .warnings { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 
     /* 阴阳：静态白线太极图，中间两枚不动圆点为按钮（阴/阳） */
     .row-yinyang {
@@ -267,25 +271,6 @@
       margin: 0;
       text-align: center;
     }
-    .btn-start-first-10 {
-      padding: 6px 14px;
-      font-size: 0.75rem;
-      color: var(--black);
-      background: var(--gold);
-      border: 1px solid var(--gold-dim);
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: inherit;
-      letter-spacing: 0.1em;
-    }
-    .btn-start-first-10:hover {
-      background: var(--gold-dim);
-      color: var(--white);
-    }
-    .btn-start-first-10:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
     .btn-close-all-terminals {
       padding: 6px 14px;
       font-size: 0.75rem;
@@ -368,6 +353,9 @@
       margin: 0;
       color: var(--text);
     }
+    html[lang="en"] .card-hex .card-title {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
     .card-hex .card-gateway { font-size: 0.6rem; color: var(--text-dim); margin: 0; text-align: center; word-break: break-all; }
     .card-hex .card-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
     .card-hex .btn-start,
@@ -423,35 +411,37 @@
     }
   </style>
 </head>
-<body>
+<body data-i18n-title="title">
   <div id="starfield" aria-hidden="true"></div>
   <div class="page-content">
   <div class="header">
     <div class="header-row">
-      <span></span>
-      <div class="header-center">
+      <div class="header-left">
         <h1>Yinova</h1>
-        <p class="sub">· 六十四卦 · 阴 · 多实例控制面板 ·</p>
-        <p class="yin-status-bar" id="yinStatusBar">
-          <span class="yin-status-dot" id="yinStatusDot"></span>
-          <span id="yinStatusText">阴 · 检测中…</span>
-        </p>
       </div>
-      <span style="display:flex;gap:8px;align-items:center;">
-        <a href="config.html" class="btn-header-project" title="配置" style="font-size:0.9rem;">⚙</a>
-        <a href="projects.html" class="btn-header-project" title="项目空间">+</a>
-      </span>
+      <div class="header-right">
+        <div class="header-buttons">
+          <span id="yinova-lang-toggle-wrap"></span>
+          <a href="config.html" class="btn-header-project" data-i18n-title="btnConfig" title="配置" style="font-size:0.9rem;">⚙</a>
+          <a href="projects.html" class="btn-header-project" data-i18n-title="btnProjects" title="项目空间">+</a>
+        </div>
+        <div class="monitor" id="monitor">
+    <div class="monitor-header" id="monitorHeader">
+      <h3 data-i18n="monitorTitle">系统负载</h3>
+      <button type="button" class="monitor-toggle" id="monitorToggle" data-i18n-title="monitorCollapse" aria-label="折叠" title="折叠">▼</button>
+    </div>
+    <div class="monitor-body">
+    <div class="monitor-row"><span data-i18n="mem">内存</span> <span id="mem">--</span></div>
+    <div class="monitor-row"><span data-i18n="cpuPct">CPU 使用率</span> <span id="cpuPct">--</span></div>
+    <div class="monitor-row"><span data-i18n="cpuLoad">CPU 负载 (1/5 min)</span> <span id="load">--</span></div>
+    <div class="monitor-row"><span data-i18n="cpus">CPU 核数</span> <span id="cpus">--</span></div>
+    <div class="monitor-row"><span data-i18n="swap">交换已用</span> <span id="swap">—</span></div>
+    <div class="monitor-row" style="color:var(--text-dim);font-size:0.7rem;"><span data-i18n="monitorRefresh">每 5 秒刷新 · 上次</span> <span id="updated">--</span></div>
+    <div class="warnings" id="warnings"></div>
     </div>
   </div>
-  <div class="monitor" id="monitor">
-    <h3>本机系统负载 · 多开参考</h3>
-    <div class="monitor-row">内存: <span id="mem">--</span></div>
-    <div class="monitor-row">CPU 使用率: <span id="cpuPct">--</span></div>
-    <div class="monitor-row">CPU 负载 (1/5 min): <span id="load">--</span></div>
-    <div class="monitor-row">CPU 核数: <span id="cpus">--</span></div>
-    <div class="monitor-row">交换已用: <span id="swap">—</span></div>
-    <div class="monitor-row" style="color:var(--text-dim);font-size:0.75rem;">每 5 秒刷新 · 上次 <span id="updated">--</span></div>
-    <div class="warnings" id="warnings"></div>
+      </div>
+    </div>
   </div>
 
   <div class="row-yinyang" id="rowYinyang">
@@ -466,21 +456,21 @@
         <circle class="stroke" cx="50" cy="50" r="50"/>
         <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
       </svg>
-      <button type="button" class="taiji-dot" data-robot="main" title="阴 · 点击启动/停止" aria-label="阴"></button>
-      <button type="button" class="taiji-dot" data-robot="yang" title="阳 · 仅作展示" aria-label="阳"></button>
+      <button type="button" class="taiji-dot" data-robot="main" data-i18n-title="yinClickStart" title="阴 · 点击启动/停止" aria-label="阴"></button>
+      <button type="button" class="taiji-dot" data-robot="yang" data-i18n-title="yangDisplayOnly" title="阳 · 仅作展示" aria-label="阳"></button>
     </div>
   </div>
   <div class="section-hexagrams">
     <div class="label-row">
-      <p class="label" id="hexLabel">卦象 · 已启动 0</p>
-      <button type="button" class="btn-start-first-10" id="btnStartFirst10" title="一次性启动乾、坤、泰、否、谦、豫、随、蛊、临、观">一键启动前10卦</button>
-      <button type="button" class="btn-close-all-terminals" id="btnCloseAllTerminals" title="关闭 64 卦中由面板打开的所有终端窗口（不停止网关）">一键关闭所有终端</button>
+      <p class="label" id="hexLabel" data-i18n="hexLabelWithCount" data-i18n-args="[0]">卦象 · 已启动 0</p>
+      <button type="button" class="btn-close-all-terminals" id="btnCloseAllTerminals" data-i18n-title="btnCloseAllTerminalsTitle" data-i18n="btnCloseAllTerminals" title="关闭 64 卦中由面板打开的所有终端窗口（不停止网关）">一键关闭所有终端</button>
     </div>
     <div class="grid-64" id="grid64"></div>
   </div>
   <div class="toast" id="toast"></div>
   </div>
 
+  <script src="i18n.js"></script>
   <script>
     // 未配置 API Key 时跳转到配置页
     (function checkConfig() {
@@ -516,6 +506,8 @@
     const rowYinyang = document.getElementById('rowYinyang');
     const grid64 = document.getElementById('grid64');
 
+    var t = window.YINOVA_I18N && window.YINOVA_I18N.t ? window.YINOVA_I18N.t.bind(window.YINOVA_I18N) : function(k) { return k; };
+    var getHexDisplayName = window.YINOVA_I18N && window.YINOVA_I18N.getHexDisplayName ? function(id, name) { return window.YINOVA_I18N.getHexDisplayName(id, name); } : function(id, name) { return name || id; };
     function show(msg) {
       toast.textContent = msg;
       toast.classList.add('show');
@@ -547,6 +539,31 @@
     setInterval(updateMonitor, 5000);
     updateMonitor();
 
+    (function initMonitorCollapse() {
+      var STORAGE_KEY = 'yinova_monitor_collapsed';
+      var mon = document.getElementById('monitor');
+      var header = document.getElementById('monitorHeader');
+      var btn = document.getElementById('monitorToggle');
+      if (!mon || !header || !btn) return;
+      var collapsed = localStorage.getItem(STORAGE_KEY) === '1';
+      function apply() {
+        mon.classList.toggle('monitor--collapsed', collapsed);
+        btn.textContent = collapsed ? '▶' : '▼';
+        var key = collapsed ? 'monitorExpand' : 'monitorCollapse';
+        btn.setAttribute('data-i18n-title', key);
+        btn.setAttribute('title', t(key));
+        btn.setAttribute('aria-label', t(key));
+      }
+      function toggle() {
+        collapsed = !collapsed;
+        localStorage.setItem(STORAGE_KEY, collapsed ? '1' : '0');
+        apply();
+      }
+      header.addEventListener('click', function(e) { if (e.target !== btn) toggle(); });
+      btn.addEventListener('click', function(e) { e.stopPropagation(); toggle(); });
+      apply();
+    })();
+
     function displayName(robot) {
       if (robot.id === 'main') return '阴';
       return robot.name;
@@ -557,11 +574,11 @@
       robots.forEach(r => { byId[r.id] = r; });
       const hexRunning = robots.filter(r => r.id !== 'main' && r.running).length;
       const labelEl = document.getElementById('hexLabel');
-      if (labelEl) labelEl.textContent = '卦象 · 已启动 ' + hexRunning;
+      if (labelEl) labelEl.textContent = t('hexLabelWithCount', hexRunning);
       rowYinyang.querySelectorAll('.taiji-dot').forEach(btn => {
         const rid = btn.dataset.robot;
         if (rid === 'yang') {
-          btn.title = '阳 · 仅作展示';
+          btn.title = t('yangDisplayOnly');
           return;
         }
         const r = byId[rid];
@@ -569,9 +586,9 @@
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = '阴 · 点击停止';
+          btn.title = t('yinClickStop');
         } else {
-          btn.title = '阴 · 点击启动';
+          btn.title = t('yinClickStart');
         }
       });
       grid64.querySelectorAll('.card-hex').forEach(card => {
@@ -584,7 +601,7 @@
         var dot = card.querySelector('.status-dot');
         if (dot) {
           dot.classList.toggle('running', running);
-          dot.setAttribute('aria-label', running ? '运行中' : '未运行');
+          dot.setAttribute('aria-label', running ? t('statusRunning') : t('statusStopped'));
         }
         var startBtn = card.querySelector('.btn-start');
         var stopBtn = card.querySelector('.btn-stop');
@@ -601,13 +618,13 @@
           const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
           const data = await r.json().catch(() => ({}));
           if (r.ok && !data.error) {
-            show('已弹出终端');
+            show(t('toastTerminalOpened'));
           } else {
-            show(data.error || '启动失败 (HTTP ' + r.status + ')');
+            show(data.error || t('toastStartFailed') + ' (HTTP ' + r.status + ')');
             (targetEl || btn).classList.remove('starting');
           }
         } catch (e) {
-          show('请求失败: ' + (e.message || ''));
+          show(t('toastRequestFailed') + ': ' + (e.message || ''));
           (targetEl || btn).classList.remove('starting');
         }
       });
@@ -620,14 +637,14 @@
           const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
           const data = await r.json().catch(() => ({}));
           if (r.ok && !data.error) {
-            show('已停止');
+            show(t('toastStopped'));
             var next = await fetchRobots();
             updateCardsRunning(next);
           } else {
-            show(data.error || '停止失败');
+            show(data.error || t('toastStopFailed'));
           }
         } catch (e) {
-          show('请求失败: ' + (e.message || ''));
+          show(t('toastRequestFailed') + ': ' + (e.message || ''));
         }
         btn.disabled = false;
       });
@@ -652,7 +669,7 @@
         const robotId = btn.dataset.robot;
         btn.addEventListener('click', async () => {
           if (robotId === 'yang') {
-            show('仅作展示');
+            show(t('toastDisplayOnly'));
             return;
           }
           const robots = await fetchRobots();
@@ -665,14 +682,14 @@
               const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
               const data = await r.json().catch(() => ({}));
               if (r.ok && !data.error) {
-                show('已停止');
+                show(t('toastStopped'));
                 var next = await fetchRobots();
                 updateCardsRunning(next);
               } else {
-                show(data.error || '停止失败');
+                show(data.error || t('toastStopFailed'));
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailed') + ': ' + (e.message || ''));
             }
             btn.disabled = false;
           } else {
@@ -682,13 +699,13 @@
               const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
               const data = await r.json().catch(() => ({}));
               if (r.ok && !data.error) {
-                show('已弹出终端');
+                show(t('toastTerminalOpened'));
               } else {
-                show(data.error || '启动失败 (HTTP ' + r.status + ')');
+                show(data.error || t('toastStartFailed') + ' (HTTP ' + r.status + ')');
                 btn.classList.remove('starting');
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailed') + ': ' + (e.message || ''));
               btn.classList.remove('starting');
             }
           }
@@ -697,12 +714,12 @@
 
       grid64.innerHTML = hexagrams.map(robot => `
         <div class="card-hex" data-robot="${robot.id}" data-port="${robot.port != null ? robot.port : ''}">
-          <span class="status-dot${robot.running ? ' running' : ''}" aria-label="${robot.running ? '运行中' : '未运行'}"></span>
-          <p class="card-title">${robot.name}</p>
+          <span class="status-dot${robot.running ? ' running' : ''}" aria-label="${robot.running ? t('statusRunning') : t('statusStopped')}"></span>
+          <p class="card-title">${getHexDisplayName(robot.id, robot.name)}</p>
           <p class="card-gateway">${(robot.gateway || '').replace('ws://', '')}</p>
           <div class="card-actions">
-            <button type="button" class="btn-start" data-action="start">启动</button>
-            <button type="button" class="btn-stop" data-action="stop">停止</button>
+            <button type="button" class="btn-start" data-action="start">${t('btnStart')}</button>
+            <button type="button" class="btn-stop" data-action="stop">${t('btnStop')}</button>
           </div>
         </div>
       `).join('');
@@ -719,9 +736,9 @@
           try {
             const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
             const data = await r.json().catch(() => ({}));
-            if (r.ok && !data.error) show('已弹出终端');
-            else { show(data.error || '启动失败'); card.classList.remove('starting'); }
-          } catch (err) { show('请求失败: ' + (err.message || '')); card.classList.remove('starting'); }
+            if (r.ok && !data.error) show(t('toastTerminalOpened'));
+            else { show(data.error || t('toastStartFailed')); card.classList.remove('starting'); }
+          } catch (err) { show(t('toastRequestFailed') + ': ' + (err.message || '')); card.classList.remove('starting'); }
         } else if (stopBtn) {
           stopBtn.disabled = true;
           try {
@@ -729,11 +746,11 @@
             const r = await fetch('/api/stop/' + robotId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             const data = await r.json().catch(() => ({}));
             if (r.ok && !data.error) {
-              show('已停止');
+              show(t('toastStopped'));
               var next = await fetchRobots();
               updateCardsRunning(next);
-            } else show(data.error || '停止失败');
-          } catch (err) { show('请求失败: ' + (err.message || '')); }
+            } else show(data.error || t('toastStopFailed'));
+          } catch (err) { show(t('toastRequestFailed') + ': ' + (err.message || '')); }
           stopBtn.disabled = false;
         }
       });
@@ -753,31 +770,7 @@
       schedulePoll();
     }
 
-    const btnStartFirst10 = document.getElementById('btnStartFirst10');
-    if (btnStartFirst10) {
-      btnStartFirst10.addEventListener('click', async () => {
-        btnStartFirst10.disabled = true;
-        show('正在启动前10卦，请稍候…');
-        try {
-          const r = await fetch('/api/start-first-10', { method: 'POST' });
-          const data = await r.json().catch(() => ({}));
-          if (r.ok && data.ok) {
-            const n = (data.started && data.started.length) || 0;
-            const failed = (data.failed && data.failed.length) || 0;
-            if (failed) {
-              show('已启动 ' + n + ' 个，' + failed + ' 个失败');
-            } else {
-              show('已启动 ' + n + ' 个卦，终端会依次弹出');
-            }
-          } else {
-            show(data.error || '启动失败 (HTTP ' + r.status + ')');
-          }
-        } catch (e) {
-          show('请求失败: ' + (e.message || ''));
-        }
-        btnStartFirst10.disabled = false;
-      });
-    }
+    // 「一键启动前10卦」按钮已移除，接口仍保留以兼容脚本调用
 
     const btnCloseAllTerminals = document.getElementById('btnCloseAllTerminals');
     if (btnCloseAllTerminals) {
@@ -788,7 +781,7 @@
           const data = await r.json().catch(() => ({}));
           if (r.ok && data.ok) {
             const n = (data.closed != null ? data.closed : 0);
-            show(n > 0 ? '已关闭所有卦终端并停止网关，正在更新状态…' : '没有由面板打开的终端');
+            show(n > 0 ? t('toastClosedAll') : t('toastNoTerminals'));
             // 立即刷新（nocache），然后每500ms刷新一次，持续6次（共3秒）
             var next = await fetchRobots(true);
             updateCardsRunning(next);
@@ -799,20 +792,39 @@
               updateCardsRunning(next);
               if (refreshCount >= 6) {
                 clearInterval(refreshInterval);
-                show('状态已更新');
+                show(t('toastStatusUpdated'));
               }
             }, 500);
           } else {
-            show(data.error || '关闭失败');
+            show(data.error || t('toastCloseFailed'));
           }
         } catch (e) {
-          show('请求失败: ' + (e.message || ''));
+          show(t('toastRequestFailed') + ': ' + (e.message || ''));
         }
         btnCloseAllTerminals.disabled = false;
       });
     }
 
     render();
+
+    window.YINOVA_APPLY_I18N_EXTRAS = function() {
+      fetchRobots().then(function(r) {
+        updateCardsRunning(r);
+        var grid = document.getElementById('grid64');
+        if (grid && window.YINOVA_I18N) {
+          var byId = {};
+          r.forEach(function(robot) { byId[robot.id] = robot; });
+          grid.querySelectorAll('.card-hex').forEach(function(card) {
+            var rid = card.dataset.robot;
+            var robot = byId[rid];
+            var title = card.querySelector('.card-title');
+            if (title && robot) title.textContent = getHexDisplayName(robot.id, robot.name);
+          });
+          grid.querySelectorAll('.btn-start').forEach(function(b) { b.textContent = window.YINOVA_I18N.t('btnStart'); });
+          grid.querySelectorAll('.btn-stop').forEach(function(b) { b.textContent = window.YINOVA_I18N.t('btnStop'); });
+        }
+      });
+    };
 
     // 阴连接状态轮询（每10秒）
     var yinStatusDot = document.getElementById('yinStatusDot');

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>项目空间 · Yinova</title>
+  <script src="i18n.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet" />
@@ -515,12 +516,13 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 </head>
-<body>
+<body data-i18n-title="projectsTitle">
   <div id="starfield"></div>
   <div class="app">
     <div class="top-strip">
-      <div class="top-bar">
-        <a href="index.html" class="link-back">← 面板首页</a>
+      <div class="top-bar" style="display:flex;justify-content:space-between;align-items:center;">
+        <a href="index.html" class="link-back" data-i18n="backHome">← 面板首页</a>
+        <span id="yinova-lang-toggle-wrap"></span>
       </div>
       <div class="row-yinyang" id="rowYinyang">
         <div class="taiji-wrap">
@@ -534,8 +536,8 @@
             <circle class="stroke" cx="50" cy="50" r="50"/>
             <path class="stroke" d="M50 0 A25 25 0 0 1 50 50 A25 25 0 0 0 50 100"/>
           </svg>
-          <button type="button" class="taiji-dot" data-robot="main" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
-          <button type="button" class="taiji-dot" data-robot="lan" title="阳 · 点击启动/停止" aria-label="阳"></button>
+          <button type="button" class="taiji-dot" data-robot="main" data-i18n-title="yinClickMain" title="阴 · 平台总控 · 点击启动/停止" aria-label="阴"></button>
+          <button type="button" class="taiji-dot" data-robot="lan" data-i18n-title="yangClickStart" title="阳 · 点击启动" aria-label="阳"></button>
         </div>
       </div>
     </div>
@@ -543,26 +545,26 @@
       <div class="page-left">
         <div class="module-projects">
           <section class="section-create">
-            <h2>新建项目</h2>
+            <h2 data-i18n="createProject">新建项目</h2>
             <div class="create-row">
-              <input type="text" id="newProjectName" placeholder="输入项目名称" maxlength="64" />
-              <button type="button" class="btn-create" id="btnCreate">新建</button>
+              <input type="text" id="newProjectName" data-i18n-placeholder="inputProjectName" placeholder="输入项目名称" maxlength="64" />
+              <button type="button" class="btn-create" id="btnCreate" data-i18n="btnCreate">新建</button>
             </div>
           </section>
           <section class="section-list">
-            <h2>项目列表</h2>
+            <h2 data-i18n="projectList">项目列表</h2>
             <ul class="project-list" id="projectList"></ul>
-            <p class="empty-hint" id="emptyHint" style="display:none;">暂无项目，上方创建后即可在项目内选卦、与阴对话。</p>
+            <p class="empty-hint" id="emptyHint" style="display:none;" data-i18n="emptyHint">暂无项目，上方创建后即可在项目内选卦、与阴对话。</p>
           </section>
         </div>
       </div>
-      <div class="resizer-v" id="resizerV" title="拖动调整宽度"></div>
+      <div class="resizer-v" id="resizerV" data-i18n-title="resizeTitle" title="拖动调整宽度"></div>
       <div class="page-right">
         <section class="section-yin-chat">
-          <h2>与阴对话（全局）<button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn">清空记录</button></h2>
+          <h2><span data-i18n="withYinGlobal">与阴对话（全局）</span><button type="button" class="yin-chat-clear-btn" id="yinChatClearBtn" data-i18n="clearRecord">清空记录</button></h2>
           <div class="yin-chat-input-row">
-            <input type="text" id="yinChatInput" placeholder="输入消息与阴对话…" maxlength="2000" />
-            <button type="button" class="yin-chat-send" id="yinChatSend">发送</button>
+            <input type="text" id="yinChatInput" data-i18n-placeholder="inputToYinShort" placeholder="输入消息与阴对话…" maxlength="2000" />
+            <button type="button" class="yin-chat-send" id="yinChatSend" data-i18n="btnSend">发送</button>
           </div>
           <div class="yin-chat-messages" id="yinChatMessages"></div>
         </section>
@@ -571,6 +573,7 @@
   </div>
   <div class="toast" id="toast"></div>
   <script>
+    var t = window.YINOVA_I18N && window.YINOVA_I18N.t ? window.YINOVA_I18N.t.bind(window.YINOVA_I18N) : function(k) { return (arguments.length > 1 ? k.replace('{0}', arguments[1]) : k); };
     (function initStarfield() {
       var container = document.getElementById('starfield');
       if (!container) return;
@@ -622,9 +625,9 @@
         btn.classList.toggle('running', isRunning);
         if (isRunning) {
           btn.classList.remove('starting');
-          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击停止';
+          btn.title = btn.dataset.robot === 'main' ? t('yinClickMainStop') : t('yangClickStop');
         } else {
-          btn.title = (btn.dataset.robot === 'main' ? '阴 · 平台总控' : '阳') + ' · 点击启动';
+          btn.title = btn.dataset.robot === 'main' ? t('yinClickMainStart') : t('yangClickStart');
         }
       });
     }
@@ -644,14 +647,14 @@
               const r = await fetch('/api/stop/' + robotId, { method: 'POST' });
               const data = await r.json().catch(function() { return {}; });
               if (r.ok && !data.error) {
-                show('已停止');
+                show(t('toastStopped'));
                 const next = await fetchRobots();
                 updateYinyangState(next);
               } else {
-                show(data.error || '停止失败');
+                show(data.error || t('toastStopFailed'));
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailedShort') + ': ' + (e.message || ''));
             }
             btn.disabled = false;
           } else {
@@ -661,13 +664,13 @@
               const r = await fetch('/api/open-tui/' + robotId, { method: 'POST' });
               const data = await r.json().catch(function() { return {}; });
               if (r.ok && !data.error) {
-                show('已弹出终端');
+                show(t('toastTerminalOpened'));
               } else {
-                show(data.error || '启动失败 (HTTP ' + r.status + ')');
+                show(data.error || t('toastStartFailed') + ' (HTTP ' + r.status + ')');
                 btn.classList.remove('starting');
               }
             } catch (e) {
-              show('请求失败: ' + (e.message || ''));
+              show(t('toastRequestFailedShort') + ': ' + (e.message || ''));
               btn.classList.remove('starting');
             }
           }
@@ -688,6 +691,7 @@
     }
 
     function renderList(projects) {
+      window.__lastProjects = projects || [];
       listEl.innerHTML = '';
       if (!projects || projects.length === 0) {
         emptyHint.style.display = 'block';
@@ -705,11 +709,11 @@
         var isHexDefinition = p.noDelete || p.id === 'hex-definition';
         var nameSpan = document.createElement('span');
         nameSpan.className = 'name';
-        nameSpan.textContent = p.name;
-        if (!isHexDefinition) nameSpan.title = '点击编辑名称';
+        nameSpan.textContent = (p.id === 'hex-definition') ? t('hexDefinitionName') : p.name;
+        if (!isHexDefinition) nameSpan.title = t('clickEditName');
         var metaSpan = document.createElement('span');
         metaSpan.className = 'meta';
-        metaSpan.textContent = '卦象 ' + (p.hexIds && p.hexIds.length ? p.hexIds.length + ' 个' : '未选');
+        metaSpan.textContent = p.hexIds && p.hexIds.length ? t('hexCount', p.hexIds.length) : t('hexNotSelected');
         // 点击名字跳转；非「卦的自定义」时可点击编辑名称
         if (!isHexDefinition) {
           nameSpan.addEventListener('click', function(e) {
@@ -737,13 +741,13 @@
                   if (result.ok) {
                     p.name = result.data.name;
                     nameSpan.textContent = result.data.name;
-                    show('已重命名为：' + result.data.name);
+                    show(t('toastRenamed', result.data.name));
                   } else {
-                    show(result.data.error || '重命名失败');
+                    show(result.data.error || t('toastRenameFailed'));
                   }
                   input.replaceWith(nameSpan);
                 })
-                .catch(function() { show('请求失败'); input.replaceWith(nameSpan); });
+                .catch(function() { show(t('toastRequestFailedShort')); input.replaceWith(nameSpan); });
             }
             input.addEventListener('blur', saveRename);
             input.addEventListener('keydown', function(e) {
@@ -766,23 +770,23 @@
           var btnDelete = document.createElement('button');
           btnDelete.type = 'button';
           btnDelete.className = 'btn-card-action btn-delete';
-          btnDelete.textContent = '删除';
+          btnDelete.textContent = t('btnDelete');
           actions.appendChild(btnDelete);
           btnDelete.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (!confirm('确定删除项目「' + p.name + '」？')) return;
+            if (!confirm(t('confirmDeleteProject', p.name))) return;
             fetch('/api/projects/' + encodeURIComponent(p.id), { method: 'DELETE' })
               .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
               .then(function(result) {
                 if (result.ok) {
-                  show('已删除');
+                  show(t('toastDeleted'));
                   loadProjects();
                 } else {
-                  show(result.data.error || '删除失败');
+                  show(result.data.error || t('toastDeleteFailed'));
                 }
               })
-              .catch(function() { show('请求失败'); });
+              .catch(function() { show(t('toastRequestFailedShort')); });
           });
         }
         card.appendChild(actions);
@@ -805,7 +809,7 @@
           return projects;
         })
         .catch(function() { 
-          show('加载项目列表失败');
+          show(t('toastLoadProjectsFailed'));
           return [];
         });
     }
@@ -813,7 +817,7 @@
     btnCreate.addEventListener('click', function() {
       var name = (newNameInput.value || '').trim();
       if (!name) {
-        show('请输入项目名称');
+        show(t('toastEnterProjectName'));
         return;
       }
       btnCreate.disabled = true;
@@ -826,7 +830,7 @@
         .then(function(result) {
           if (result.ok) {
             newNameInput.value = '';
-            show('已创建：' + result.data.name);
+            show(t('toastCreated', result.data.name));
             // 刷新列表，然后跳转到项目页面
             loadProjects().then(function() {
               setTimeout(function() {
@@ -834,10 +838,10 @@
               }, 200);
             });
           } else {
-            show(result.data.error || '创建失败');
+            show(result.data.error || t('toastCreateFailed'));
           }
         })
-        .catch(function() { show('请求失败'); })
+        .catch(function() { show(t('toastRequestFailedShort')); })
         .then(function() { btnCreate.disabled = false; });
     });
     newNameInput.addEventListener('keydown', function(e) {
@@ -894,7 +898,7 @@
       if (!yinChatMessages) return;
       var div = document.createElement('div');
       div.className = 'yin-chat-msg ' + role;
-      var who = role === 'user' ? '我' : '阴';
+      var who = role === 'user' ? t('me') : t('yinLabel');
       var textHtml = role === 'user' ? escapeHtml(text) : ('<span class="yin-chat-md">' + (typeof marked !== 'undefined' ? marked.parse(String(text || ''), { breaks: true, gfm: true }) : escapeHtml(text)) + '</span>');
       div.innerHTML = '<span class="who">' + escapeHtml(who) + '</span>' + textHtml;
       yinChatMessages.appendChild(div);
@@ -920,7 +924,7 @@
             }
             if (task.status === 'error') {
               try { sessionStorage.removeItem(YIN_TASK_KEY_GLOBAL); } catch (e) {}
-              appendYinChatMsg('yin', '（' + (task.error || '暂时无法收到阴的回复') + '）');
+              appendYinChatMsg('yin', task.error ? t('yinNoReplyWith', task.error) : '（' + t('yinNoReply') + '）');
               yinChatSend.disabled = false;
               return;
             }
@@ -945,7 +949,7 @@
           .then(function(data) {
             var taskId = data && data.taskId;
             if (!taskId) {
-              appendYinChatMsg('yin', '（暂时无法收到阴的回复：' + (data && data.error ? data.error : '未返回 taskId') + '）');
+              appendYinChatMsg('yin', t('yinNoReplyWith', (data && data.error ? data.error : '未返回 taskId')));
               yinChatSend.disabled = false;
               return;
             }
@@ -953,7 +957,7 @@
             pollYinTask(taskId);
           })
           .catch(function() {
-            appendYinChatMsg('yin', '（请求失败）');
+            appendYinChatMsg('yin', '（' + t('toastRequestFailedShort') + '）');
             yinChatSend.disabled = false;
           });
       });
@@ -977,7 +981,7 @@
     var yinChatClearBtn = document.getElementById('yinChatClearBtn');
     if (yinChatClearBtn) {
       yinChatClearBtn.addEventListener('click', function() {
-        if (!confirm('确定清空与阴的全部聊天记录？')) return;
+        if (!confirm(t('confirmClearYinChat'))) return;
         if (yinChatMessages) yinChatMessages.innerHTML = '';
         _yinChatCache = [];
         try { localStorage.removeItem(CHAT_STORAGE_KEY); } catch (e) {}
@@ -1008,6 +1012,18 @@
     }
 
     loadProjects();
+
+    window.YINOVA_APPLY_I18N_EXTRAS = function() {
+      if (rowYinyang) {
+        fetchRobots().then(updateYinyangState);
+      }
+      var msgs = document.querySelectorAll('.yin-chat-msg');
+      msgs.forEach(function(m) {
+        var who = m.querySelector('.who');
+        if (who) who.textContent = m.classList.contains('user') ? t('me') : t('yinLabel');
+      });
+      renderList(window.__lastProjects || []);
+    };
   </script>
 </body>
 </html>
