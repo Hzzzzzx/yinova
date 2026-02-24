@@ -1530,18 +1530,21 @@ app.post('/api/reports/generate', (req, res) => {
 // 与阴对话：走主网关 18789（与终端 moltbot TUI 同一 Claw），不再用 Bala。网关需启用 HTTP chatCompletions。
 const MAIN_GATEWAY_HTTP = `http://127.0.0.1:${MAIN_GATEWAY_PORT}`;
 function getMainGatewayToken() {
-  const envToken = process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || '';
+  const envToken = process.env.LIANDAN_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || '';
   if (envToken) return envToken;
-  try {
-    const p = path.join(os.homedir(), '.moltbot', 'moltbot.json');
-    if (fs.existsSync(p)) {
+  // 优先从项目内 阴/moltbot.json 读取（install.sh 生成，含随机 token）
+  const readTokenFromMoltbot = (p) => {
+    try {
+      if (!fs.existsSync(p)) return '';
       const j = JSON.parse(fs.readFileSync(p, 'utf8'));
       const auth = (j.gateway && j.gateway.auth) ? j.gateway.auth : {};
-      if (auth.token) return String(auth.token);
-      if (auth.password) return String(auth.password);
-    }
-  } catch (_) {}
-  return '';
+      return String(auth.token || auth.password || '');
+    } catch (_) { return ''; }
+  };
+  const fromYin = readTokenFromMoltbot(path.join(ROOT_DIR, '阴', 'moltbot.json'));
+  if (fromYin) return fromYin;
+  // 兜底：全局 ~/.moltbot/moltbot.json
+  return readTokenFromMoltbot(path.join(os.homedir(), '.moltbot', 'moltbot.json'));
 }
 // 聊天历史持久化存储（本地文件，不依赖浏览器缓存）
 const CHAT_DATA_DIR = path.join(__dirname, 'data');
@@ -1753,10 +1756,10 @@ app.post('/api/yin/chat', async (req, res) => {
     if (!response.ok) {
       const errMsg = data.error?.message || data.message || `HTTP ${response.status}`;
       if (response.status === 404 || response.status === 405) {
-        return res.status(502).json({ error: '主网关未开启或不允许 HTTP Chat 接口。请在 clawdbot 主网关配置中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启主网关。', reply: null });
+        return res.status(502).json({ error: '主网关未开启或不允许 HTTP Chat 接口。请在阴的配置（阴/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启主网关。', reply: null });
       }
       if (response.status === 401) {
-        return res.status(502).json({ error: '主网关鉴权失败(Unauthorized)。面板会从 ~/.moltbot/moltbot.json 的 gateway.auth.token 读取 token；若仍报错请设置环境变量 CLAWDBOT_MAIN_GATEWAY_TOKEN 后重启面板。', reply: null });
+        return res.status(502).json({ error: '主网关鉴权失败(Unauthorized)。面板会从 阴/moltbot.json 的 gateway.auth.token 自动读取 token；若仍报错请设置环境变量 LIANDAN_GATEWAY_TOKEN 后重启面板。', reply: null });
       }
       return res.status(502).json({ error: errMsg, reply: null });
     }

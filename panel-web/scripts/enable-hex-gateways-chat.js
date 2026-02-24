@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * 为 64 卦的 moltbot.json 启用 HTTP Chat 接口，使「与卦对话」能收到各卦回复。
- * 用法：在 clawdbot分身 目录下执行
+ * 用法（在炼丹项目根目录下）：
  *   node panel-web/scripts/enable-hex-gateways-chat.js
  *
  * 会读取 workers.conf，对每卦的 stateDir/moltbot.json 写入

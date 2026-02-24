@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# 完整控制面板：主(clawdbot) + LAN + 易经 64 卦（乾～未济）
+# 完整控制面板：主(阴) + LAN + 易经 64 卦（乾～未济）
 # 主、1～64 卦支持一键启动/停止；LAN 仅支持停止
 # 用法: ./panel-full.sh [status|start|stop|tui] [id]
-#   id: 主|lan|1|2|...|64  其中 主=clawdbot(18789)，1～64=乾～未济
+#   id: 主|lan|1|2|...|64  其中 主=阴(18789)，1～64=乾～未济
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,7 +40,7 @@ print_status() {
   done < "$CONF"
 }
 
-start_main_clawdbot() {
+start_main_yin() {
   if [[ ! -f "$OPENCLAW_DIR/openclaw.mjs" ]]; then
     echo "openclaw 不存在，请先运行 ./install.sh"
     return 1
@@ -69,7 +69,7 @@ do_start() {
     return 1
   fi
   if [[ "$id" == "主" || "$id" == "main" ]]; then
-    start_main_clawdbot
+    start_main_yin
     return $?
   fi
   if [[ "$id" == "lan" || "$id" == "LAN" ]]; then
@@ -131,7 +131,7 @@ case "$action" in
   *)
     echo "用法: $0 [status|start|stop|tui] [id]"
     echo "  status       查看主+LAN+64卦状态（默认）"
-    echo "  start <id>   启动 id=主(clawdbot)|1～64(乾～未济)"
+    echo "  start <id>   启动 id=主(阴)|1～64(乾～未济)"
     echo "  stop <id>    停止 id=主|lan|1～64"
     echo "  tui <id>     启动并开 TUI，id=1～64 (乾～未济)"
     exit 1
