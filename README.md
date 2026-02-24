@@ -8,7 +8,7 @@
 
 ```bash
 # 1. 克隆并安装
-git clone https://github.com/<your-name>/liandan && cd liandan
+git clone https://github.com/goldct/liandan && cd liandan
 chmod +x install.sh 启动面板.sh
 ./install.sh
 

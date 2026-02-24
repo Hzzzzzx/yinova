@@ -95,18 +95,22 @@ done
 } > "$ROOT/workers.conf"
 echo "已生成 workers.conf"
 
-# 3. 阴：若有 moltbot.json 则替换路径
-if [[ -f "$ROOT/阴/moltbot.json" ]]; then
-  if grep -q "__LIANDAN_ROOT__\|/Users/gold" "$ROOT/阴/moltbot.json" 2>/dev/null; then
-    if [[ "$(uname)" == "Darwin" ]]; then
-      sed -i '' "s|__LIANDAN_ROOT__|$ROOT|g" "$ROOT/阴/moltbot.json"
-      sed -i '' "s|/Users/gold/Desktop/clawdbot分身|$ROOT|g" "$ROOT/阴/moltbot.json"
-    else
-      sed -i "s|__LIANDAN_ROOT__|$ROOT|g" "$ROOT/阴/moltbot.json"
-      sed -i "s|/Users/gold/Desktop/clawdbot分身|$ROOT|g" "$ROOT/阴/moltbot.json"
-    fi
-    echo "已更新 阴/moltbot.json"
+# 3. 阴：若 moltbot.json 不存在，从 .example 自动生成
+YIN_CONF="$ROOT/阴/moltbot.json"
+YIN_EXAMPLE="$ROOT/阴/moltbot.json.example"
+if [[ ! -f "$YIN_CONF" ]] && [[ -f "$YIN_EXAMPLE" ]]; then
+  cp "$YIN_EXAMPLE" "$YIN_CONF"
+  echo "已从 moltbot.json.example 生成 阴/moltbot.json"
+fi
+if [[ -f "$YIN_CONF" ]]; then
+  if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i '' "s|__LIANDAN_ROOT__|$ROOT|g" "$YIN_CONF"
+    sed -i '' "s|liandan_local_replace_me|$GATEWAY_TOKEN|g" "$YIN_CONF"
+  else
+    sed -i "s|__LIANDAN_ROOT__|$ROOT|g" "$YIN_CONF"
+    sed -i "s|liandan_local_replace_me|$GATEWAY_TOKEN|g" "$YIN_CONF"
   fi
+  echo "已配置 阴/moltbot.json"
 fi
 
 # 4. panel-web 依赖
