@@ -352,6 +352,12 @@
             html.push('<span class="' + (d.inUse ? 'used' : 'free') + '">' + label + ' ' + d.port + ': ' + (d.inUse ? t('portUsed') : t('portFree')) + '</span>');
           });
           document.getElementById('portResult').innerHTML = html.join(' &nbsp;|&nbsp; ');
+          if (data.autoFixed && data.config) {
+            document.getElementById('portMain').value = data.config.portMain;
+            document.getElementById('portHexStart').value = data.config.portHexStart;
+            document.getElementById('panelPort').value = data.config.panelPort;
+            showMsg(t('portAutoFixed'), false);
+          }
         })
         .catch(function() {
           document.getElementById('portResult').innerHTML = '<span class="used">' + t('checkFailed') + '</span>';

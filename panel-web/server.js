@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Yinova 面板：阴（平台总控网关）+ 易经 64 卦控制
- * - 阴：点启动 → 弹终端运行 启动阴.sh（网关 + TUI）。
+ * - 阴：点启动 → 弹终端运行 start-yin.sh（网关 + TUI）。
  * - 乾～未济：点启动 → 若对应端口未占用会先自动起网关，再弹终端开 TUI（一键启动）。
  */
 const express = require('express');
@@ -209,6 +209,28 @@ function isPortInUse(port) {
   }
 }
 
+function findFreePort(start, exclude) {
+  const excl = new Set(exclude || []);
+  for (let p = start; p < 65536; p++) {
+    if (excl.has(p)) continue;
+    if (!isPortInUse(p)) return p;
+  }
+  return start;
+}
+
+function findFreePortBlock(start, count, exclude) {
+  const excl = new Set(exclude || []);
+  for (let s = start; s < 65536 - count; s++) {
+    let ok = true;
+    for (let i = 0; i < count; i++) {
+      const p = s + i;
+      if (excl.has(p) || isPortInUse(p)) { ok = false; break; }
+    }
+    if (ok) return s;
+  }
+  return start;
+}
+
 // 后台启动 moltbot gateway（乾～未济）：直接调用 start-worker.sh，与 panel-full.sh start <id> 一致
 function startGatewayInBackground(worker) {
   if (!worker || !worker.workerId) return;
@@ -230,7 +252,7 @@ function startGatewayInBackground(worker) {
 const MAIN_GATEWAY_PORT = parseInt((GATEWAY_MAIN || '').replace(/.*:(\d+)$/, '$1'), 10) || 18789;
 const MAIN_GATEWAY_LOG = path.join(os.tmpdir(), 'yinova-main.log');
 function startMainGatewayInBackground() {
-  const yinDir = path.join(ROOT_DIR, '阴');
+  const yinDir = path.join(ROOT_DIR, 'yin');
   const cmd = `cd ${OPENCLAW_DIR} && OPENCLAW_STATE_DIR="${yinDir}" OPENCLAW_GATEWAY_PORT=${MAIN_GATEWAY_PORT} nohup node openclaw.mjs gateway </dev/null >> "${MAIN_GATEWAY_LOG}" 2>&1 &`;
   const env = getConfigEnv();
   delete env.http_proxy; delete env.https_proxy;
@@ -452,13 +474,71 @@ app.get('/api/config', (_req, res) => {
 });
 app.get('/api/config/check-ports', (req, res) => {
   try {
-    const portMain = parseInt(req.query.portMain, 10) || 18789;
-    const portHexStart = parseInt(req.query.portHexStart, 10) || 18791;
-    const panelPort = parseInt(req.query.panelPort, 10) || 3999;
+    const current = readConfig();
+    let portMain = parseInt(req.query.portMain, 10) || current.portMain || 18789;
+    let portHexStart = parseInt(req.query.portHexStart, 10) || current.portHexStart || 18791;
+    let panelPort = parseInt(req.query.panelPort, 10) || current.panelPort || 3999;
+
+    const mainInUse = isPortInUse(portMain);
+    const hexInUse = isPortInUse(portHexStart);
+    const panelInUse = isPortInUse(panelPort);
+    let autoFixed = false;
+
+    if (mainInUse || hexInUse || panelInUse) {
+      const exclude = new Set([portMain, panelPort]);
+      for (let i = 0; i < 64; i++) exclude.add(portHexStart + i);
+
+      if (mainInUse) {
+        portMain = findFreePort(portMain, exclude);
+        exclude.add(portMain);
+      }
+      if (hexInUse) {
+        portHexStart = findFreePortBlock(portHexStart, 64, exclude);
+        for (let i = 0; i < 64; i++) exclude.add(portHexStart + i);
+      }
+      if (panelInUse) {
+        panelPort = findFreePort(panelPort, exclude);
+      }
+
+      const config = { ...current, portMain, portHexStart, panelPort };
+      writeConfig(config);
+
+      const yinMolt = path.join(ROOT_DIR, 'yin', 'moltbot.json');
+      if (fs.existsSync(yinMolt)) {
+        try {
+          const j = JSON.parse(fs.readFileSync(yinMolt, 'utf8'));
+          j.gateway = j.gateway || {};
+          j.gateway.port = portMain;
+          fs.writeFileSync(yinMolt, JSON.stringify(j, null, 2), 'utf8');
+        } catch (_) {}
+      }
+
+      if (fs.existsSync(WORKERS_CONF)) {
+        const rows = parseWorkersConf();
+        const hexNames = ['乾','坤','泰','否','谦','豫','随','蛊','临','观','屯','蒙','需','讼','师','比','小畜','履','同人','大有','噬嗑','贲','剥','复','无妄','大畜','颐','大过','坎','离','咸','恒','遯','大壮','晋','明夷','家人','睽','蹇','解','损','益','夬','姤','萃','升','困','井','革','鼎','震','艮','渐','归妹','丰','旅','巽','兑','涣','节','中孚','小过','既济','未济'];
+        const lines = ['# 格式: worker_id|state_dir|port|token'];
+        for (let i = 0; i < 64; i++) {
+          const id = i + 1;
+          const name = hexNames[i] || ('hex' + id);
+          const port = portHexStart + i;
+          const token = (rows[i] && rows[i].token) || '';
+          lines.push(`${id}|hexes/${name}|${port}|${token}`);
+        }
+        fs.writeFileSync(WORKERS_CONF, lines.join('\n') + '\n', 'utf8');
+        syncGatewayPortFromWorkersConf();
+      }
+
+      _portsCache = null;
+      _portsCacheTime = 0;
+      autoFixed = true;
+    }
+
     res.json({
       portMain: { port: portMain, inUse: isPortInUse(portMain) },
       portHexStart: { port: portHexStart, inUse: isPortInUse(portHexStart) },
-      panelPort: { port: panelPort, inUse: isPortInUse(panelPort) }
+      panelPort: { port: panelPort, inUse: isPortInUse(panelPort) },
+      autoFixed,
+      config: autoFixed ? { portMain, portHexStart, panelPort } : undefined
     });
   } catch (err) {
     res.status(500).json({ error: err.message || '检测失败' });
@@ -496,7 +576,7 @@ app.post('/api/config', (req, res) => {
           fs.writeFileSync(path.join(agentDir, 'auth-profiles.json'), authJson, 'utf8');
         } catch (_) {}
       };
-      writeAuthTo(path.join(ROOT_DIR, '阴', 'agents', 'main', 'agent'));
+      writeAuthTo(path.join(ROOT_DIR, 'yin', 'agents', 'main', 'agent'));
       parseWorkersConf().forEach((r) => {
         writeAuthTo(path.join(r.stateDir, 'agents', 'main', 'agent'));
       });
@@ -514,7 +594,7 @@ app.post('/api/config', (req, res) => {
         fs.writeFileSync(moltPath, JSON.stringify(j, null, 2), 'utf8');
       } catch (_) {}
     };
-    updateModelInMoltbot(path.join(ROOT_DIR, '阴', 'moltbot.json'));
+    updateModelInMoltbot(path.join(ROOT_DIR, 'yin', 'moltbot.json'));
     parseWorkersConf().forEach((r) => {
       updateModelInMoltbot(path.join(r.stateDir, 'moltbot.json'));
     });
@@ -1591,7 +1671,7 @@ const MAIN_GATEWAY_HTTP = `http://127.0.0.1:${MAIN_GATEWAY_PORT}`;
 function getMainGatewayToken() {
   const envToken = process.env.YINOVA_GATEWAY_TOKEN || process.env.OPENCLAW_GATEWAY_TOKEN || process.env.CLAWDBOT_MAIN_GATEWAY_TOKEN || '';
   if (envToken) return envToken;
-  // 优先从项目内 阴/moltbot.json 读取（install.sh 生成，含随机 token）
+  // 优先从项目内 yin/moltbot.json 读取（install.sh 生成，含随机 token）
   const readTokenFromMoltbot = (p) => {
     try {
       if (!fs.existsSync(p)) return '';
@@ -1600,7 +1680,7 @@ function getMainGatewayToken() {
       return String(auth.token || auth.password || '');
     } catch (_) { return ''; }
   };
-  const fromYin = readTokenFromMoltbot(path.join(ROOT_DIR, '阴', 'moltbot.json'));
+  const fromYin = readTokenFromMoltbot(path.join(ROOT_DIR, 'yin', 'moltbot.json'));
   if (fromYin) return fromYin;
   // 兜底：全局 ~/.moltbot/moltbot.json
   return readTokenFromMoltbot(path.join(os.homedir(), '.moltbot', 'moltbot.json'));
@@ -1895,14 +1975,14 @@ app.post('/api/yin/chat', (req, res) => {
       let data = {};
       try {
         if (rawBody.trim().startsWith('<') || rawBody.includes('<!DOCTYPE') || rawBody.includes('<html')) {
-          task.error = '阴网关返回了网页而非 JSON。可能原因：1) 访问了错误路径（正确为 POST /v1/chat/completions）；2) 阴网关未启用 HTTP chatCompletions；3) 阴网关未正确启动。请确认 阴/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true，并先点击「阴·启动」。';
+          task.error = '阴网关返回了网页而非 JSON。可能原因：1) 访问了错误路径（正确为 POST /v1/chat/completions）；2) 阴网关未启用 HTTP chatCompletions；3) 阴网关未正确启动。请确认 yin/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true，并先点击「阴·启动」。';
           task.status = 'error';
           return;
         }
         data = JSON.parse(rawBody);
       } catch (_) {
         if (rawBody.length > 200) {
-          task.error = '阴网关返回了非 JSON 格式。请确认阴网关已正确启动（点击阴·启动），且 阴/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true。';
+          task.error = '阴网关返回了非 JSON 格式。请确认阴网关已正确启动（点击阴·启动），且 yin/moltbot.json 中 gateway.http.endpoints.chatCompletions.enabled = true。';
         } else {
           task.error = '阴网关响应异常：' + (rawBody.slice(0, 100) || '空响应');
         }
@@ -1912,9 +1992,9 @@ app.post('/api/yin/chat', (req, res) => {
       if (!response.ok) {
         const errMsg = data.error?.message || data.message || `HTTP ${response.status}`;
         if (response.status === 404 || response.status === 405) {
-          task.error = '阴网关未开启或不允许 HTTP Chat 接口。请在阴的配置（阴/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启阴网关。';
+          task.error = '阴网关未开启或不允许 HTTP Chat 接口。请在阴的配置（yin/moltbot.json）中设置 gateway.http.endpoints.chatCompletions.enabled = true 后重启阴网关。';
         } else if (response.status === 401) {
-          task.error = '阴网关鉴权失败(Unauthorized)。请检查 阴/moltbot.json 或环境变量 YINOVA_GATEWAY_TOKEN。';
+          task.error = '阴网关鉴权失败(Unauthorized)。请检查 yin/moltbot.json 或环境变量 YINOVA_GATEWAY_TOKEN。';
         } else {
           task.error = errMsg;
         }
@@ -2795,7 +2875,7 @@ app.post('/api/open-tui/:robot', (req, res) => {
     const robot = req.params.robot;
     if (robot === 'main') {
       // 阴：使用项目内的启动脚本
-      const yinStartScript = path.join(ROOT_DIR, '阴', '启动阴.sh');
+      const yinStartScript = path.join(ROOT_DIR, 'yin', 'start-yin.sh');
       runTerminalScript('main', `bash "${yinStartScript}"`);
       return res.json({ ok: true });
     }

@@ -13,9 +13,9 @@ echo "=== Yinova 安装 ==="
 echo "项目目录: $ROOT"
 
 # 确保关键脚本可执行（clone 后可能丢失权限）
-chmod +x "$ROOT/install.sh" "$ROOT/启动面板.sh" "$ROOT/启动面板.command" 2>/dev/null || true
+chmod +x "$ROOT/install.sh" "$ROOT/start-panel.sh" "$ROOT/start-panel.command" 2>/dev/null || true
 chmod +x "$ROOT/start-worker.sh" "$ROOT/stop-worker.sh" 2>/dev/null || true
-[[ -f "$ROOT/阴/启动阴.sh" ]] && chmod +x "$ROOT/阴/启动阴.sh" 2>/dev/null || true
+[[ -f "$ROOT/yin/start-yin.sh" ]] && chmod +x "$ROOT/yin/start-yin.sh" 2>/dev/null || true
 
 # 移除根目录下的旧卦目录（现已改用 hexes/）
 removed=0
@@ -101,11 +101,11 @@ done
 echo "已生成 workers.conf"
 
 # 3. 阴：若 moltbot.json 不存在，从 .example 自动生成
-YIN_CONF="$ROOT/阴/moltbot.json"
-YIN_EXAMPLE="$ROOT/阴/moltbot.json.example"
+YIN_CONF="$ROOT/yin/moltbot.json"
+YIN_EXAMPLE="$ROOT/yin/moltbot.json.example"
 if [[ ! -f "$YIN_CONF" ]] && [[ -f "$YIN_EXAMPLE" ]]; then
   cp "$YIN_EXAMPLE" "$YIN_CONF"
-  echo "已从 moltbot.json.example 生成 阴/moltbot.json"
+  echo "已从 moltbot.json.example 生成 yin/moltbot.json"
 fi
 if [[ -f "$YIN_CONF" ]]; then
   if [[ "$(uname)" == "Darwin" ]]; then
@@ -118,7 +118,7 @@ if [[ -f "$YIN_CONF" ]]; then
     sed -i "s|replace_with_random_secret_token|$GATEWAY_TOKEN|g" "$YIN_CONF"
   fi
   # 修正 workspace 路径（复制项目后可能指向旧目录）
-  YIN_WORKSPACE="$ROOT/阴/workspace"
+  YIN_WORKSPACE="$ROOT/yin/workspace"
   if command -v node >/dev/null 2>&1; then
     node -e '
       const fs=require("fs");
@@ -131,11 +131,11 @@ if [[ -f "$YIN_CONF" ]]; then
       if(ws&&ws!==wantWorkspace) {
         j.agents.defaults.workspace=wantWorkspace;
         fs.writeFileSync(confPath,JSON.stringify(j,null,2),"utf8");
-        console.log("已修正 阴 workspace 路径");
+        console.log("已修正 yin workspace 路径");
       }
     ' "$YIN_CONF" "$YIN_WORKSPACE" 2>/dev/null || true
   fi
-  echo "已配置 阴/moltbot.json"
+  echo "已配置 yin/moltbot.json"
 fi
 
 # 4. panel-web 依赖
@@ -145,5 +145,5 @@ fi
 
 echo ""
 echo "=== 安装完成 ==="
-echo "启动: ./启动面板.sh  或双击 启动面板.command"
+echo "启动: ./start-panel.sh  或双击 start-panel.command"
 echo "打开 http://localhost:3999 ，在配置页填写 API Key 即可使用"

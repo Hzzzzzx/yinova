@@ -78,31 +78,31 @@ config.json
 node_modules/
 
 # 用户数据
-阴/moltbot.json
-阴/update-check.json
-阴/agents/main/sessions/
-阴/agents/main/agent/
-阴/workspace/*
-!阴/workspace/skills/
-阴/canvas/
-阴/cron/
-阴/devices/
-阴/identity/
-阴/memory/
-阴/update-check.json
+yin/moltbot.json
+yin/update-check.json
+yin/agents/main/sessions/
+yin/agents/main/agent/
+yin/workspace/*
+!yin/workspace/skills/
+yin/canvas/
+yin/cron/
+yin/devices/
+yin/identity/
+yin/memory/
+yin/update-check.json
 hexes/
 
-# 阴 内部文档（保留 README）
-阴/API_KEY策略分析.md
-阴/两种模式对比分析.md
-阴/对话*.md
-阴/执行操作后必须回复.md
-阴/当前*.md
-阴/最终版本架构设计.md
-阴/架构与沟通机制分析.md
-阴/测试*.md
-阴/问题分析与解决方案.md
-阴/项目上下文识别问题修复.md
+# yin 内部文档（保留 README）
+yin/API_KEY策略分析.md
+yin/两种模式对比分析.md
+yin/对话*.md
+yin/执行操作后必须回复.md
+yin/当前*.md
+yin/最终版本架构设计.md
+yin/架构与沟通机制分析.md
+yin/测试*.md
+yin/问题分析与解决方案.md
+yin/项目上下文识别问题修复.md
 *.log
 *.bak
 
@@ -144,6 +144,7 @@ docs/
 # 内部/上架规划文档（含绝对路径，不提交）
 PRE_RELEASE_*.md
 GITHUB_*.md
+OPENSOURCE_CHECKLIST.md
 
 # 系统
 .DS_Store

@@ -99,7 +99,7 @@ docs: 更新 README 安装说明
 
 3. **启动开发环境**
    ```bash
-   ./启动面板.sh
+   ./start-panel.sh
    ```
 
 4. **测试**
@@ -115,7 +115,7 @@ yinova/
 ├── panel-web/          # Web 面板后端和前端
 │   ├── server.js       # Express 服务器
 │   └── public/         # 前端页面
-├── 阴/                 # 主网关节点
+├── yin/                # Main gateway node
 │   └── workspace/      # 工作目录和技能
 ├── hex-template/       # 卦模板
 ├── install.sh          # 安装脚本

@@ -5,4 +5,4 @@ cd "$(dirname "$0")"
 # 延迟 3 秒后打开浏览器（等面板就绪）
 (sleep 3 && open "http://localhost:3999") &
 
-./启动面板.sh
+./start-panel.sh

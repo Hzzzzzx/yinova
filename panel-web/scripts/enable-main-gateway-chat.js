@@ -5,7 +5,7 @@
  *   node panel-web/scripts/enable-main-gateway-chat.js
  *
  * 会依次查找并修改：
- *   1) <Yinova根目录>/阴/moltbot.json
+ *   1) <Yinova root>/yin/moltbot.json
  *   2) ~/.moltbot/moltbot.json
  * 找到后写入 gateway.http.endpoints.chatCompletions.enabled = true，并备份原文件。
  * 修改后需重启主网关（面板点「阴·停止」再「阴·启动」）。
@@ -17,7 +17,7 @@ const os = require('os');
 
 const ROOT = path.join(__dirname, '..', '..');
 const candidates = [
-  path.join(ROOT, '阴', 'moltbot.json'),
+  path.join(ROOT, 'yin', 'moltbot.json'),
   path.join(os.homedir(), '.moltbot', 'moltbot.json'),
 ];
 
