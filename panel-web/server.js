@@ -6,6 +6,7 @@
  */
 const express = require('express');
 const cors = require('cors');
+const isMac = process.platform === 'darwin';
 const { spawn, spawnSync, execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -264,16 +265,26 @@ function startMainGatewayInBackground() {
 
 // 启动：do script 后取新窗口的 id 写入文件，便于停止时精确关闭
 function runTerminalScript(robot, shellCmd) {
-  const cmdStr = JSON.stringify(shellCmd);
-  const script = [
-    'tell application "Terminal" to do script ' + cmdStr,
-    'delay 0.6',
-    'tell application "Terminal" to return id of front window'
-  ].join('\n');
-  const r = spawnSync('osascript', ['-e', script], { encoding: 'utf8', maxBuffer: 1024 });
-  const id = (r.stdout && r.stdout.trim()) || '';
-  if (id) {
-    try { fs.writeFileSync(ID_FILE(robot), id, 'utf8'); } catch (_) {}
+  if (isMac) {
+    const cmdStr = JSON.stringify(shellCmd);
+    const script = [
+      'tell application Terminal to do script ' + cmdStr,
+      'delay 0.6',
+      'tell application Terminal to return id of front window'
+    ].join('\n');
+    const r = spawnSync('osascript', ['-e', script], { encoding: 'utf8', maxBuffer: 1024 });
+    const id = (r.stdout && r.stdout.trim()) || '';
+    if (id) {
+      try { fs.writeFileSync(ID_FILE(robot), id, 'utf8'); } catch (_) {}
+    }
+  } else {
+    const sp = path.join(os.tmpdir(), 'yinova-' + robot + '-' + Date.now() + '.sh');
+    try {
+      fs.writeFileSync(sp, '#!/bin/bash\n' + shellCmd + '\n', { mode: 0o755 });
+      const ch = spawn('bash', [sp], { stdio: 'ignore', detached: true });
+      ch.unref();
+      try { fs.writeFileSync(ID_FILE(robot), 'linux-' + ch.pid, 'utf8'); } catch (_) {}
+    } catch(e) { console.error(e.message); }
   }
 }
 
