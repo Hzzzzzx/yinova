@@ -330,20 +330,25 @@
       padding-top: 18px;
       border-top: 1px solid var(--border);
     }
+    .hex-switches-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
     .section-hex-switches h2 {
       font-size: 0.95rem;
       color: var(--gold-dim);
       font-weight: 500;
       letter-spacing: 0.08em;
-      margin: 0 0 12px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      margin: 0;
     }
     .hex-switches-batch-btns {
       display: flex;
-      gap: 6px;
-      margin-left: auto;
+      gap: 8px;
+      flex-shrink: 0;
     }
     .btn-hex-batch {
       font-size: 0.78rem;
@@ -1012,12 +1017,13 @@
     </div>
 
     <section class="section-hex-switches" id="sectionHexSwitches" style="display:none;">
-      <h2 data-i18n="hexSwitchesTitle">本项目卦象 · 启停
-        <span class="hex-switches-batch-btns">
+      <div class="hex-switches-header">
+        <h2 data-i18n="hexSwitchesTitle">本项目卦象 · 启停</h2>
+        <div class="hex-switches-batch-btns">
           <button type="button" class="btn-hex-batch" id="btnStartAllHex" data-i18n="startAll">一键启动</button>
           <button type="button" class="btn-hex-batch stop-all" id="btnStopAllHex" data-i18n="stopAll">一键停止</button>
-        </span>
-      </h2>
+        </div>
+      </div>
       <div class="hex-switches" id="hexSwitches"></div>
     </section>
 

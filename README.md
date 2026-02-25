@@ -1,6 +1,6 @@
 # Yinova
 
-64-hexagram control panel · openclaw multi-instance · one-click deploy · v1.1
+64-hexagram control panel · openclaw multi-instance · one-click deploy · v1.2
 
 > Manage openclaw instances via a web panel (Yin main gateway + 64 hexagram nodes). Supports mainstream AI providers—fill in API Key and go.
 

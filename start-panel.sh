@@ -18,4 +18,6 @@ if command -v lsof >/dev/null 2>&1; then
 fi
 
 cd panel-web
-node server.js
+# Mac 上约 3 秒后自动打开浏览器（与 start-panel.command 一致）
+[[ "$(uname)" == "Darwin" ]] && (sleep 3 && open "http://localhost:${PANEL_PORT:-3999}" 2>/dev/null) &
+exec node server.js

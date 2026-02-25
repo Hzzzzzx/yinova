@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2 (2026-02-25)
+
+### UX
+
+- **项目页「本项目卦象·启停」**：一键启动 / 一键停止按钮单独成行，更易发现
+- **阴的身份定义**：yin/workspace/IDENTITY.md、SOUL.md、MEMORY.md 纳入仓库，fresh clone 后阴即带预设身份
+- **安装完成提示**：步骤更清晰（Mac 推荐双击 start-panel.command；终端用 ./start-panel.sh）；Mac 上安装结束后自动打开项目文件夹（Finder），便于找到启动文件
+- **start-panel.sh**：Mac 上启动后约 3 秒自动打开浏览器（与 start-panel.command 一致）
+
+---
+
 ## 1.1 (2026-02-24)
 
 ### Directory & script rename (阴 → yin)

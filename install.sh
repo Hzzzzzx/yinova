@@ -145,5 +145,19 @@ fi
 
 echo ""
 echo "=== 安装完成 ==="
-echo "启动: ./start-panel.sh  或双击 start-panel.command"
-echo "打开 http://localhost:3999 ，在配置页填写 API Key 即可使用"
+echo ""
+echo "启动方式（二选一）："
+echo ""
+echo "  Mac 用户（推荐）："
+echo "    1. 在 Finder 中打开项目文件夹（下面将自动打开）"
+echo "    2. 双击 start-panel.command"
+echo "    3. 约 3 秒后会自动打开浏览器"
+echo ""
+echo "  终端用户："
+echo "    执行: ./start-panel.sh"
+echo "    然后打开: http://localhost:3999"
+echo ""
+echo "首次使用：在配置页填写 API Key 即可。"
+echo ""
+# Mac 上自动打开项目文件夹，方便用户找到 start-panel.command
+[[ "$(uname)" == "Darwin" ]] && open "$ROOT" 2>/dev/null || true

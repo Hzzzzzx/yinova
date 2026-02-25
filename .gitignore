@@ -84,6 +84,9 @@ yin/agents/main/sessions/
 yin/agents/main/agent/
 yin/workspace/*
 !yin/workspace/skills/
+!yin/workspace/IDENTITY.md
+!yin/workspace/SOUL.md
+!yin/workspace/MEMORY.md
 yin/canvas/
 yin/cron/
 yin/devices/
@@ -145,6 +148,9 @@ docs/
 PRE_RELEASE_*.md
 GITHUB_*.md
 OPENSOURCE_CHECKLIST.md
+
+# 本地打的发布包（不纳入版本库）
+yinova-*.zip
 
 # 系统
 .DS_Store
